@@ -16,9 +16,8 @@ export const metadata: Metadata = {
     title: 'Vinix L&F',
   },
   icons: {
-    icon: '/logo.svg',
-    shortcut: '/logo.svg',
-    apple: '/logo.svg',
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
   },
 };
 
