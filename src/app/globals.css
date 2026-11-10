@@ -1,0 +1,344 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   Vinix Lost & Found Design System
+  Blend of Figma Portal Specification and a clean system interface
+   ========================================================================== */
+
+:root {
+  /* Neutral palette blended with brand navy */
+  --apple-bg: #f5f5f7;
+  --apple-surface: rgba(255, 255, 255, 0.85);
+  --apple-surface-solid: #ffffff;
+  --apple-surface-secondary: #fbfbfd;
+  --apple-border: rgba(0, 0, 0, 0.08);
+  --apple-border-subtle: rgba(0, 0, 0, 0.04);
+  --apple-border-focus: #0071e3;
+  
+  /* Primary Identity (from Figma) */
+  --brand-navy: #123356;
+  --brand-navy-hover: #0c233c;
+  --brand-navy-dark: #091524;
+  --brand-accent-blue: #0071e3;
+  --brand-accent-light: #e8f2fc;
+  
+  /* Typography */
+  --text-primary: #1d1d1f;
+  --text-secondary: #515154;
+  --text-tertiary: #86868b;
+  --text-inverse: #ffffff;
+  
+  /* Status Indicators */
+  --system-green: #34c759;
+  --system-green-bg: #eaf8ee;
+  --system-orange: #ff9500;
+  --system-orange-bg: #fff6e8;
+  --system-red: #ff3b30;
+  --system-blue: #0071e3;
+  
+  /* Shadows */
+  --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  --shadow-card: 0 4px 14px -2px rgba(0, 0, 0, 0.05), 0 1px 4px rgba(0, 0, 0, 0.02);
+  --shadow-elevated: 0 18px 40px -8px rgba(0, 0, 0, 0.09), 0 4px 12px rgba(0, 0, 0, 0.04);
+  --shadow-window: 0 24px 60px rgba(0, 0, 0, 0.15), 0 0 1px rgba(0, 0, 0, 0.2);
+  
+  /* Curvatures (Apple Squircles) */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-pill: 9999px;
+
+  /* Fonts */
+  --font-stack: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Helvetica Neue", sans-serif;
+}
+
+/* Global Reset */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--apple-bg);
+  color: var(--text-primary);
+  font-family: var(--font-stack);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Keyboard focus stays visible everywhere */
+:where(a, button, [role="button"], [role="menuitem"], summary):focus-visible {
+  outline: 2px solid var(--brand-accent-blue);
+  outline-offset: 2px;
+}
+
+/* Mobile-first adjustments */
+@media (max-width: 767px) {
+  /* Prevent iOS Safari from zooming the page when an input is focused */
+  .form-input,
+  input.form-input,
+  select.form-input,
+  textarea.form-input {
+    font-size: 16px;
+  }
+
+  /* Comfortable thumb targets */
+  .btn-primary,
+  .btn-secondary {
+    min-height: 46px;
+  }
+}
+
+/* Respect notches and gesture bars on phones */
+@supports (padding: env(safe-area-inset-top)) {
+  .site-header {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* Hover lift only makes sense with a real pointer */
+@media (hover: none) {
+  .apple-card:hover {
+    transform: none;
+    box-shadow: var(--shadow-card);
+    border-color: var(--apple-border);
+  }
+}
+
+/* Frosted Glass Header */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-bottom: 1px solid var(--apple-border);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Header Bar Accent */
+.traffic-lights {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.traffic-light {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 0.5px solid rgba(0, 0, 0, 0.12);
+}
+
+.traffic-light-close { background-color: #ff5f56; }
+.traffic-light-min { background-color: #ffbd2e; }
+.traffic-light-max { background-color: #27c93f; }
+
+/* Segmented Control */
+.segmented-control {
+  display: inline-flex;
+  padding: 3px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: var(--radius-sm);
+  border: 0.5px solid var(--apple-border-subtle);
+  user-select: none;
+}
+
+.segmented-control-btn {
+  padding: 6px 14px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  border: none;
+  background: transparent;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.segmented-control-btn:hover {
+  color: var(--text-primary);
+}
+
+.segmented-control-btn.active {
+  background: #ffffff;
+  color: var(--text-primary);
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1), 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+/* Apple Crisp Cards */
+.apple-card {
+  background: #ffffff;
+  border: 1px solid var(--apple-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease;
+}
+
+.apple-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-elevated);
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+/* Input and Search Styling */
+.form-input {
+  background: #ffffff;
+  border: 1px solid var(--apple-border);
+  border-radius: var(--radius-sm);
+  padding: 9px 14px;
+  font-size: 0.9375rem;
+  font-family: inherit;
+  color: var(--text-primary);
+  transition: all 0.15s ease;
+  outline: none;
+}
+
+/* select-specific reset so native arrow disappears and custom chevron shows */
+select.form-input {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  padding-right: 2.5rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  cursor: pointer;
+}
+
+/* Input variant with a leading icon: icon sits at left-3 (12px), so we need pl 36px */
+.form-input-icon-left {
+  padding-left: 2.25rem;
+}
+
+/* Input variant with a trailing icon (e.g. show/hide password) */
+.form-input-icon-right {
+  padding-right: 2.5rem;
+}
+
+.form-input:focus {
+  border-color: var(--brand-accent-blue);
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
+}
+
+/* Keyboard Shortcut Pill */
+.kbd-shortcut {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--text-tertiary);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* Buttons */
+.btn-primary {
+  background-color: var(--brand-navy);
+  color: var(--text-inverse);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+  min-height: 44px;
+}
+
+.btn-primary:hover {
+  background-color: var(--brand-navy-hover);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background: #ffffff;
+  color: var(--brand-navy);
+  border: 1px solid var(--apple-border);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+  min-height: 44px;
+}
+
+.btn-secondary:hover {
+  background: #fbfbfd;
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+/* Badges */
+.badge-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.badge-found {
+  background: var(--system-green-bg);
+  color: var(--system-green);
+}
+
+.badge-draft {
+  background: var(--system-orange-bg);
+  color: var(--system-orange);
+}
+
+.badge-completed {
+  background: #f1f5f9;
+  color: var(--text-secondary);
+}
+
+/* Deep Footer from Figma */
+.site-footer {
+  background-color: var(--brand-navy-dark);
+  color: #94a3b8;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Sonner: move close button to the right */
+[data-sonner-toaster] [data-sonner-toast] [data-close-button],
+[data-sonner-toast][data-styled='true'] [data-close-button] {
+  left: auto !important;
+  right: 8px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-styled='true'] {
+  --toast-close-button-start: unset;
+  --toast-close-button-end: 0;
+  padding-right: 42px !important;
+}
