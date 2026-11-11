@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Save, UserRound } from 'lucide-react';
+import { Save } from 'lucide-react';
 import { getCurrentUser } from '@/lib/supabase/auth';
 import { createClient } from '@/lib/supabase/client';
 import { validateIndonesianPhone, sanitizePhoneInput, validateFullName, validateID } from '@/lib/validation';
 import { toast } from 'sonner';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { Button } from '@/components/ui/Button';
+import { TextInput } from '@/components/ui/Field';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -109,69 +112,79 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <div className="apple-card bg-white p-6 sm:p-8">
-        <div className="flex items-start gap-3 mb-8">
-          <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center"><UserRound className="w-5 h-5" /></div>
-          <div><h1 className="text-2xl font-extrabold text-[#123356]">Pengaturan akun</h1><p className="text-sm text-slate-500 mt-1">Perbarui informasi profil dan kontak karyawan.</p></div>
-        </div>
+    <div className="mx-auto max-w-2xl space-y-8 px-4 py-10 sm:px-6 lg:px-8">
+      <PageHeader
+        eyebrow="Akun"
+        title="Pengaturan akun"
+        description="Perbarui informasi profil dan kontak karyawan."
+      />
 
-        {error && <div role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">{error}</div>}
-        {message && <div role="status" className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">{message}</div>}
+      <div className="rounded-card border border-line bg-surface p-5 sm:p-8">
+        {error && (
+          <div role="alert" className="mb-4 rounded-control border border-danger/20 bg-danger-soft px-3 py-2.5 text-[13px] leading-5 text-danger">
+            {error}
+          </div>
+        )}
+        {message && (
+          <div role="status" className="mb-4 rounded-control border border-success/20 bg-success-soft px-3 py-2.5 text-[13px] leading-5 text-success">
+            {message}
+          </div>
+        )}
 
-        <form onSubmit={saveProfile} className="space-y-4">
-          <label className="block space-y-1.5">
-            <span className="text-xs font-bold text-slate-700">Nama lengkap</span>
-            <input
-              required
+        <form onSubmit={saveProfile} className="space-y-5">
+          <TextInput
+            label="Nama lengkap"
+            required
+            maxLength={100}
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+          />
+
+          <TextInput
+            label="Email"
+            value={email}
+            disabled
+            className="bg-surface-muted text-muted"
+          />
+
+          <TextInput
+            label="Nomor telepon / WhatsApp"
+            type="tel"
+            maxLength={16}
+            value={phone}
+            onChange={(event) => setPhone(sanitizePhoneInput(event.target.value))}
+            placeholder="Contoh: 081234567890"
+            hint="Awalan 08 atau 628 dengan 10–15 digit agar dapat dihubungi via WhatsApp."
+          />
+
+          <p className="text-pretty text-[13px] leading-5 text-body">
+            Data karyawan bersifat opsional. Kamu bisa menambahkan atau menghapusnya kapan saja.
+          </p>
+
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <TextInput
+              label="ID Karyawan (opsional)"
+              maxLength={20}
+              value={employeeId}
+              onChange={(event) => setEmployeeId(event.target.value)}
+              placeholder="Contoh: EMP-00123"
+              hint="7–20 karakter alfanumerik."
+            />
+            <TextInput
+              label="Departemen/Divisi (opsional)"
               maxLength={100}
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              className="form-input w-full"
+              value={department}
+              onChange={(event) => setDepartment(event.target.value)}
+              placeholder="Contoh: Operasional"
             />
-          </label>
-          <label className="block space-y-1.5">
-            <span className="text-xs font-bold text-slate-700">Email</span>
-            <input value={email} disabled className="form-input w-full bg-slate-50 text-slate-500" />
-          </label>
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-700 block">Nomor telepon / WhatsApp</label>
-            <input
-              type="tel"
-              maxLength={16}
-              value={phone}
-              onChange={(event) => setPhone(sanitizePhoneInput(event.target.value))}
-              className="form-input w-full"
-              placeholder="Contoh: 081234567890"
-            />
-            <span className="text-[10px] text-slate-400 block">
-              Awalan 08 atau 628 dengan 10–15 digit agar dapat dihubungi via WhatsApp.
-            </span>
           </div>
-          <p className="text-xs text-slate-600">Data karyawan bersifat opsional. Kamu bisa menambahkan atau menghapusnya kapan saja.</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 block">ID Karyawan (opsional)</label>
-              <input
-                maxLength={20}
-                value={employeeId}
-                onChange={(event) => setEmployeeId(event.target.value)}
-                className="form-input w-full"
-                placeholder="Contoh: EMP-00123"
-              />
-              <span className="text-[10px] text-slate-400 block">
-                7–20 karakter alfanumerik.
-              </span>
-            </div>
-            <label className="block space-y-1.5">
-              <span className="text-xs font-bold text-slate-700">Departemen/Divisi (opsional)</span>
-              <input maxLength={100} value={department} onChange={(event) => setDepartment(event.target.value)} className="form-input w-full" placeholder="Contoh: Operasional" />
-            </label>
+
+          <div className="border-t border-line pt-5">
+            <Button type="submit" loading={isSaving} disabled={isSaving}>
+              {!isSaving && <Save className="size-4" aria-hidden="true" />}
+              <span>{isSaving ? 'Menyimpan...' : 'Simpan Pengaturan'}</span>
+            </Button>
           </div>
-          <button type="submit" disabled={isSaving} className="btn-primary disabled:opacity-50 flex items-center gap-2">
-            <Save className="w-4 h-4" />
-            <span>{isSaving ? 'Menyimpan...' : 'Simpan Pengaturan'}</span>
-          </button>
         </form>
       </div>
     </div>

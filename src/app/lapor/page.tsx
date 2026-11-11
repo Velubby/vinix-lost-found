@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useLayoutEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ShieldAlert, Upload, Camera, CheckCircle2, ArrowRight, ArrowLeft, Copy, CheckCheck, X } from 'lucide-react';
+import { ShieldAlert, Upload, Camera, CheckCircle2, ArrowRight, ArrowLeft, Copy, CheckCheck, X, Check } from 'lucide-react';
 import { OFFICE_LOCATIONS } from '@/lib/locations';
 import {
   Dialog,
@@ -16,6 +16,9 @@ import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { optimizeImageFile } from '@/lib/image';
 import { validateIndonesianPhone, sanitizePhoneInput, validateFullName, validateEmail } from '@/lib/validation';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { Button } from '@/components/ui/Button';
+import { TextInput, TextArea, SelectInput } from '@/components/ui/Field';
 
 function getJakartaDateTime(timestamp = Date.now()) {
   const value = new Date(timestamp + 7 * 60 * 60 * 1000).toISOString();
@@ -43,11 +46,68 @@ function getIncidentDateTimeError(date: string, time: string, now = Date.now()) 
 const MAX_PHOTOS = 3;
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 
+const FORM_STEPS = [
+  { id: 1, label: 'Detail Barang' },
+  { id: 2, label: 'Ciri Spesifik' },
+  { id: 3, label: 'Konfirmasi' },
+] as const;
+
 type SelectedPhoto = {
   id: string;
   file: File;
   preview: string;
 };
+
+function FormStepper({ currentStep }: { currentStep: 1 | 2 | 3 }) {
+  return (
+    <ol aria-label="Tahapan formulir" className="flex items-start">
+      {FORM_STEPS.map((step, index) => {
+        const isCurrent = currentStep === step.id;
+        const isDone = currentStep > step.id;
+        const isLast = index === FORM_STEPS.length - 1;
+
+        return (
+          <li
+            key={step.id}
+            aria-current={isCurrent ? 'step' : undefined}
+            className="flex flex-1 flex-col items-center gap-2 text-center"
+          >
+            <div className="flex w-full items-center">
+              <span
+                aria-hidden="true"
+                className={cnConnector(index === 0, isDone || isCurrent)}
+              />
+              <span
+                aria-hidden="true"
+                className={[
+                  'flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
+                  isCurrent || isDone
+                    ? 'bg-brand text-inverse'
+                    : 'border border-line-strong bg-surface text-muted',
+                ].join(' ')}
+              >
+                {isDone ? <Check className="size-4" /> : step.id}
+              </span>
+              <span aria-hidden="true" className={cnConnector(isLast, isDone)} />
+            </div>
+            <span
+              className={[
+                'text-[11px] leading-4 sm:text-xs',
+                isCurrent ? 'font-semibold text-ink' : isDone ? 'font-medium text-body' : 'text-muted',
+              ].join(' ')}
+            >
+              {step.label}
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+function cnConnector(isEdge: boolean, isFilled: boolean) {
+  return ['h-px flex-1', isEdge ? 'bg-transparent' : isFilled ? 'bg-brand' : 'bg-line'].join(' ');
+}
 
 function ReportForm() {
   const router = useRouter();
@@ -131,7 +191,7 @@ function ReportForm() {
   }, [router]);
 
   if (!authChecked) {
-    return <div className="max-w-3xl mx-auto px-4 py-16 text-center text-slate-500">Memeriksa sesi akun...</div>;
+    return <div className="mx-auto max-w-3xl px-4 py-16 text-center text-sm text-muted">Memeriksa sesi akun...</div>;
   }
 
   const validateIncidentDateTime = () => {
@@ -338,542 +398,506 @@ function ReportForm() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-
-      {/* Header */}
-      <div className="text-center space-y-2">
-        <span className="text-xs font-bold text-sky-700 uppercase tracking-widest block">
-          Formulir Terpadu
-        </span>
-        <h1 className="text-3xl font-extrabold text-[#123356]">
-          {reportType === 'hilang' ? 'Laporkan Barang Hilang' : 'Laporkan Barang Temuan'}
-        </h1>
-        <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto">
-          Isi detail informasi barang. Petugas akan memverifikasi dan mencocokkan data di sistem.
-        </p>
-      </div>
-
-      {/* Type switcher */}
-      <div className="flex justify-center">
-        <div className="segmented-control p-1 bg-slate-200/70 rounded-2xl">
-          <button
-            type="button"
-            onClick={() => handleSwitchType('hilang')}
-            className={`segmented-control-btn px-4 sm:px-6 py-2 ${reportType === 'hilang' ? 'active' : ''}`}
+    <div className="mx-auto max-w-3xl space-y-8 px-4 py-10 sm:px-6 lg:px-8">
+      <PageHeader
+        eyebrow="Formulir Terpadu"
+        title={reportType === 'hilang' ? 'Laporkan Barang Hilang' : 'Laporkan Barang Temuan'}
+        description="Isi detail informasi barang. Petugas akan memverifikasi dan mencocokkan data di sistem."
+        actions={
+          <div
+            role="group"
+            aria-label="Jenis laporan"
+            className="inline-flex w-full rounded-control border border-line bg-surface-muted p-1 sm:w-auto"
           >
-            Barang Hilang
-          </button>
-          <button
-            type="button"
-            onClick={() => handleSwitchType('temuan')}
-            className={`segmented-control-btn px-4 sm:px-6 py-2 ${reportType === 'temuan' ? 'active' : ''}`}
-          >
-            Barang Ditemukan
-          </button>
-        </div>
-      </div>
+            <button
+              type="button"
+              onClick={() => handleSwitchType('hilang')}
+              aria-pressed={reportType === 'hilang'}
+              className={[
+                'inline-flex min-h-11 flex-1 items-center justify-center rounded-[6px] px-4 text-[13px] transition-colors sm:flex-none',
+                reportType === 'hilang'
+                  ? 'bg-surface font-semibold text-ink shadow-card'
+                  : 'font-medium text-body hover:text-ink',
+              ].join(' ')}
+            >
+              Barang Hilang
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSwitchType('temuan')}
+              aria-pressed={reportType === 'temuan'}
+              className={[
+                'inline-flex min-h-11 flex-1 items-center justify-center rounded-[6px] px-4 text-[13px] transition-colors sm:flex-none',
+                reportType === 'temuan'
+                  ? 'bg-surface font-semibold text-ink shadow-card'
+                  : 'font-medium text-body hover:text-ink',
+              ].join(' ')}
+            >
+              Barang Ditemukan
+            </button>
+          </div>
+        }
+      />
 
-      {/* Step Indicators */}
-      <div className="flex flex-wrap items-center justify-center gap-1 sm:gap-2 text-[11px] sm:text-xs font-semibold text-slate-500">
-        <span className={`px-2 sm:px-3 py-1 rounded-full ${currentStep === 1 ? 'bg-[#123356] text-white' : 'bg-slate-200'}`}>
-          1. Detail Barang
-        </span>
-        <span className="text-slate-300">→</span>
-        <span className={`px-2 sm:px-3 py-1 rounded-full ${currentStep === 2 ? 'bg-[#123356] text-white' : 'bg-slate-200'}`}>
-          2. Ciri Spesifik
-        </span>
-        <span className="text-slate-300">→</span>
-        <span className={`px-2 sm:px-3 py-1 rounded-full ${currentStep === 3 ? 'bg-[#123356] text-white' : 'bg-slate-200'}`}>
-          3. Konfirmasi
-        </span>
-      </div>
+      <FormStepper currentStep={currentStep} />
 
-      {/* Main Card Form */}
-      <div className="apple-card p-6 sm:p-8 bg-white">
+      <div className="rounded-card border border-line bg-surface p-5 sm:p-8">
         <form onSubmit={handleSubmit} className="space-y-6">
           {submitError && (
-            <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
+            <div role="alert" className="rounded-control border border-danger/20 bg-danger-soft px-3 py-2.5 text-[13px] leading-5 text-danger">
               {submitError}
             </div>
           )}
 
-            {/* Step 1: Detail Barang */}
-            {currentStep === 1 && (
-              <div className="space-y-4">
-                <div className="pb-3 border-b border-slate-100">
-                  <h2 className="text-base font-bold text-[#123356]">Informasi Dasar Barang</h2>
-                  <p className="text-xs text-slate-500">Tentukan nama dan lokasi kejadian sejelas mungkin.</p>
-                </div>
+          {/* Step 1: Detail Barang */}
+          {currentStep === 1 && (
+            <div className="space-y-6">
+              <div className="space-y-1 border-b border-line pb-4">
+                <h2 className="text-[17px] font-semibold text-ink">Informasi Dasar Barang</h2>
+                <p className="text-[13px] leading-5 text-muted">Tentukan nama dan lokasi kejadian sejelas mungkin.</p>
+              </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">Nama Barang</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Contoh: Dompet Kulit Cokelat, Kunci Motor Honda..."
-                    value={formData.namaBarang}
-                    onChange={(e) => setFormData({ ...formData, namaBarang: e.target.value })}
-                       className="form-input w-full"
-                  />
-                </div>
+              <TextInput
+                label="Nama Barang"
+                type="text"
+                required
+                placeholder="Contoh: Dompet Kulit Cokelat, Kunci Motor Honda..."
+                value={formData.namaBarang}
+                onChange={(e) => setFormData({ ...formData, namaBarang: e.target.value })}
+              />
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Kategori</label>
-                    <select
-                      value={predefinedCategories.includes(formData.kategori) ? formData.kategori : '__custom__'}
-                      onChange={(e) => setFormData({ ...formData, kategori: e.target.value === '__custom__' ? '' : e.target.value })}
-                      className="form-input w-full"
-                    >
-                      <option>Elektronik</option>
-                      <option>Dokumen</option>
-                      <option>Aksesoris</option>
-                      <option>Tas & Pakaian</option>
-                      <option>Lainnya</option>
-                      <option value="__custom__">Isi sendiri</option>
-                    </select>
-                    {!predefinedCategories.includes(formData.kategori) && (
-                      <input
-                        type="text"
-                        required
-                        value={formData.kategori}
-                        onChange={(e) => setFormData({ ...formData, kategori: e.target.value })}
-                        className="form-input w-full mt-2"
-                        placeholder="Tulis kategori barang"
-                      />
-                    )}
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Lokasi Kejadian</label>
-                    <select
-                      value={useCustomLocation ? '__custom__' : (OFFICE_LOCATIONS.includes(formData.lokasi) ? formData.lokasi : '')}
-                      onChange={(e) => {
-                        if (e.target.value === '__custom__') {
-                          setUseCustomLocation(true);
-                          setFormData({ ...formData, lokasi: '' });
-                        } else {
-                          setUseCustomLocation(false);
-                          setFormData({ ...formData, lokasi: e.target.value });
-                        }
-                      }}
-                      className="form-input w-full"
-                      required
-                    >
-                      <option value="">Pilih lokasi...</option>
-                      {OFFICE_LOCATIONS.map((loc) => (
-                        <option key={loc} value={loc}>{loc}</option>
-                      ))}
-                      <option value="__custom__">Lainnya (tulis sendiri)</option>
-                    </select>
-                    {useCustomLocation && (
-                      <input
-                        type="text"
-                        required
-                        placeholder="Contoh: Lobi Utama VINIX7, Ruang Training 2..."
-                        value={formData.lokasi}
-                        onChange={(e) => setFormData({ ...formData, lokasi: e.target.value })}
-                        className="form-input w-full mt-2"
-                      />
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label htmlFor="incident-date" className="text-xs font-bold text-slate-700 block">Tanggal Kejadian</label>
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <SelectInput
+                    label="Kategori"
+                    value={predefinedCategories.includes(formData.kategori) ? formData.kategori : '__custom__'}
+                    onChange={(e) => setFormData({ ...formData, kategori: e.target.value === '__custom__' ? '' : e.target.value })}
+                  >
+                    <option>Elektronik</option>
+                    <option>Dokumen</option>
+                    <option>Aksesoris</option>
+                    <option>Tas & Pakaian</option>
+                    <option>Lainnya</option>
+                    <option value="__custom__">Isi sendiri</option>
+                  </SelectInput>
+                  {!predefinedCategories.includes(formData.kategori) && (
                     <input
-                      id="incident-date"
-                      type="date"
+                      type="text"
                       required
-                      max={today}
-                      value={formData.tanggal}
+                      value={formData.kategori}
+                      onChange={(e) => setFormData({ ...formData, kategori: e.target.value })}
+                      className="form-input w-full"
+                      placeholder="Tulis kategori barang"
+                      aria-label="Tulis kategori barang"
+                    />
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <SelectInput
+                    label="Lokasi Kejadian"
+                    value={useCustomLocation ? '__custom__' : (OFFICE_LOCATIONS.includes(formData.lokasi) ? formData.lokasi : '')}
+                    onChange={(e) => {
+                      if (e.target.value === '__custom__') {
+                        setUseCustomLocation(true);
+                        setFormData({ ...formData, lokasi: '' });
+                      } else {
+                        setUseCustomLocation(false);
+                        setFormData({ ...formData, lokasi: e.target.value });
+                      }
+                    }}
+                    required
+                  >
+                    <option value="">Pilih lokasi...</option>
+                    {OFFICE_LOCATIONS.map((loc) => (
+                      <option key={loc} value={loc}>{loc}</option>
+                    ))}
+                    <option value="__custom__">Lainnya (tulis sendiri)</option>
+                  </SelectInput>
+                  {useCustomLocation && (
+                    <input
+                      type="text"
+                      required
+                      placeholder="Contoh: Lobi Utama VINIX7, Ruang Training 2..."
+                      value={formData.lokasi}
+                      onChange={(e) => setFormData({ ...formData, lokasi: e.target.value })}
+                      className="form-input w-full"
+                      aria-label="Tulis lokasi kejadian"
+                    />
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <TextInput
+                  id="incident-date"
+                  label="Tanggal Kejadian"
+                  type="date"
+                  required
+                  max={today}
+                  value={formData.tanggal}
+                  aria-invalid={Boolean(dateTimeError)}
+                  aria-describedby={dateTimeError ? 'incident-date-time-error' : undefined}
+                  onFocus={() => setCurrentTime(Date.now())}
+                  onChange={(e) => {
+                    setDateTimeError('');
+                    setFormData({ ...formData, tanggal: e.target.value });
+                  }}
+                />
+
+                <fieldset className="min-w-0 space-y-1.5">
+                  <legend className="text-[13px] font-semibold text-ink">Jam Kejadian</legend>
+                  <div className="flex items-center gap-2">
+                    <select
+                      aria-label="Jam kejadian"
+                      required
+                      value={formData.waktu.split(':')[0]}
                       aria-invalid={Boolean(dateTimeError)}
                       aria-describedby={dateTimeError ? 'incident-date-time-error' : undefined}
                       onFocus={() => setCurrentTime(Date.now())}
                       onChange={(e) => {
                         setDateTimeError('');
-                        setFormData({ ...formData, tanggal: e.target.value });
+                        setFormData({ ...formData, waktu: `${e.target.value}:${formData.waktu.split(':')[1]}` });
                       }}
-                      className="form-input w-full"
-                    />
+                      className="form-input w-full min-w-0"
+                    >
+                      {Array.from({ length: 24 }, (_, hour) => {
+                        const value = String(hour).padStart(2, '0');
+                        return (
+                          <option key={value} value={value} disabled={formData.tanggal === today && value > currentJakartaTime.slice(0, 2)}>
+                            {value}
+                          </option>
+                        );
+                      })}
+                    </select>
+                    <span aria-hidden="true" className="text-muted">:</span>
+                    <select
+                      aria-label="Menit kejadian"
+                      required
+                      value={formData.waktu.split(':')[1]}
+                      aria-invalid={Boolean(dateTimeError)}
+                      aria-describedby={dateTimeError ? 'incident-date-time-error' : undefined}
+                      onFocus={() => setCurrentTime(Date.now())}
+                      onChange={(e) => {
+                        setDateTimeError('');
+                        setFormData({ ...formData, waktu: `${formData.waktu.split(':')[0]}:${e.target.value}` });
+                      }}
+                      className="form-input w-full min-w-0"
+                    >
+                      {Array.from({ length: 60 }, (_, minute) => {
+                        const value = String(minute).padStart(2, '0');
+                        return (
+                          <option key={value} value={value} disabled={formData.tanggal === today && formData.waktu.slice(0, 2) === currentJakartaTime.slice(0, 2) && value > currentJakartaTime.slice(3, 5)}>
+                            {value}
+                          </option>
+                        );
+                      })}
+                    </select>
                   </div>
-
-                  <fieldset className="space-y-1 min-w-0">
-                    <legend className="text-xs font-bold text-slate-700">Jam Kejadian</legend>
-                    <div className="flex items-center gap-2">
-                      <select
-                        aria-label="Jam kejadian"
-                        required
-                        value={formData.waktu.split(':')[0]}
-                        aria-invalid={Boolean(dateTimeError)}
-                        aria-describedby={dateTimeError ? 'incident-date-time-error' : undefined}
-                        onFocus={() => setCurrentTime(Date.now())}
-                        onChange={(e) => {
-                          setDateTimeError('');
-                          setFormData({ ...formData, waktu: `${e.target.value}:${formData.waktu.split(':')[1]}` });
-                        }}
-                        className="form-input w-full min-w-0"
-                      >
-                        {Array.from({ length: 24 }, (_, hour) => {
-                          const value = String(hour).padStart(2, '0');
-                          return (
-                            <option key={value} value={value} disabled={formData.tanggal === today && value > currentJakartaTime.slice(0, 2)}>
-                              {value}
-                            </option>
-                          );
-                        })}
-                      </select>
-                      <span aria-hidden="true">:</span>
-                      <select
-                        aria-label="Menit kejadian"
-                        required
-                        value={formData.waktu.split(':')[1]}
-                        aria-invalid={Boolean(dateTimeError)}
-                        aria-describedby={dateTimeError ? 'incident-date-time-error' : undefined}
-                        onFocus={() => setCurrentTime(Date.now())}
-                        onChange={(e) => {
-                          setDateTimeError('');
-                          setFormData({ ...formData, waktu: `${formData.waktu.split(':')[0]}:${e.target.value}` });
-                        }}
-                        className="form-input w-full min-w-0"
-                      >
-                        {Array.from({ length: 60 }, (_, minute) => {
-                          const value = String(minute).padStart(2, '0');
-                          return (
-                            <option key={value} value={value} disabled={formData.tanggal === today && formData.waktu.slice(0, 2) === currentJakartaTime.slice(0, 2) && value > currentJakartaTime.slice(3, 5)}>
-                              {value}
-                            </option>
-                          );
-                        })}
-                      </select>
-                    </div>
-                  </fieldset>
-                </div>
-
-                {dateTimeError && (
-                  <p id="incident-date-time-error" role="alert" className="text-xs text-red-600">
-                    {dateTimeError}
-                  </p>
-                )}
-
-                <div className="pt-4 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!formData.namaBarang.trim()) {
-                        toast.error('Harap isi nama barang terlebih dahulu.');
-                        return;
-                      }
-                      if (formData.namaBarang.trim().length < 3) {
-                        toast.error('Nama barang terlalu singkat (minimal 3 karakter).');
-                        return;
-                      }
-                      if (!formData.lokasi.trim()) {
-                        toast.error('Harap isi lokasi kejadian terlebih dahulu.');
-                        return;
-                      }
-                      if (formData.lokasi.trim().length < 3) {
-                        toast.error('Lokasi kejadian terlalu singkat (minimal 3 karakter).');
-                        return;
-                      }
-                      if (!validateIncidentDateTime()) return;
-                      setCurrentStep(2);
-                    }}
-                    className="btn-primary text-xs"
-                  >
-                    <span>Lanjut ke Ciri Spesifik</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                </fieldset>
               </div>
-            )}
 
-            {/* Step 2: Ciri Spesifik & Rahasia */}
-            {currentStep === 2 && (
-              <div className="space-y-4">
-                <div className="pb-3 border-b border-slate-100">
-                  <h2 className="text-base font-bold text-[#123356]">Deskripsi &amp; Ciri Khusus</h2>
-                  <p className="text-xs text-slate-500">Ciri privat digunakan untuk memverifikasi pemilik sah.</p>
-                </div>
+              {dateTimeError && (
+                <p id="incident-date-time-error" role="alert" className="text-xs font-medium leading-5 text-danger">
+                  {dateTimeError}
+                </p>
+              )}
 
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-slate-700 block">
-                      Deskripsi Publik (Bisa dibaca umum)
-                    </label>
-                    <span className="text-[10px] text-slate-400">
-                      {formData.deskripsiPublik.length}/1000 (min. 10)
-                    </span>
-                  </div>
-                  <textarea
-                    rows={3}
-                    required
-                    maxLength={1000}
-                    placeholder="Sebutkan warna utama, bentuk, dan kondisi luar yang wajar diketahui umum..."
-                    value={formData.deskripsiPublik}
-                    onChange={(e) => setFormData({ ...formData, deskripsiPublik: e.target.value })}
-                    className="form-input w-full"
-                  />
-                  {formData.deskripsiPublik.length > 0 && formData.deskripsiPublik.trim().length < 10 && (
-                    <span className="text-[10px] text-amber-600 block">
+              <div className="flex justify-end border-t border-line pt-5">
+                <Button
+                  type="button"
+                  className="w-full sm:w-auto"
+                  onClick={() => {
+                    if (!formData.namaBarang.trim()) {
+                      toast.error('Harap isi nama barang terlebih dahulu.');
+                      return;
+                    }
+                    if (formData.namaBarang.trim().length < 3) {
+                      toast.error('Nama barang terlalu singkat (minimal 3 karakter).');
+                      return;
+                    }
+                    if (!formData.lokasi.trim()) {
+                      toast.error('Harap isi lokasi kejadian terlebih dahulu.');
+                      return;
+                    }
+                    if (formData.lokasi.trim().length < 3) {
+                      toast.error('Lokasi kejadian terlalu singkat (minimal 3 karakter).');
+                      return;
+                    }
+                    if (!validateIncidentDateTime()) return;
+                    setCurrentStep(2);
+                  }}
+                >
+                  <span>Lanjut ke Ciri Spesifik</span>
+                  <ArrowRight className="size-4" aria-hidden="true" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Ciri Spesifik & Rahasia */}
+          {currentStep === 2 && (
+            <div className="space-y-6">
+              <div className="space-y-1 border-b border-line pb-4">
+                <h2 className="text-[17px] font-semibold text-ink">Deskripsi &amp; Ciri Khusus</h2>
+                <p className="text-[13px] leading-5 text-muted">Ciri privat digunakan untuk memverifikasi pemilik sah.</p>
+              </div>
+
+              <TextArea
+                label="Deskripsi Publik (Bisa dibaca umum)"
+                action={
+                  <span className="shrink-0 text-xs tabular-nums text-muted">
+                    {formData.deskripsiPublik.length}/1000 (min. 10)
+                  </span>
+                }
+                rows={3}
+                required
+                maxLength={1000}
+                placeholder="Sebutkan warna utama, bentuk, dan kondisi luar yang wajar diketahui umum..."
+                value={formData.deskripsiPublik}
+                onChange={(e) => setFormData({ ...formData, deskripsiPublik: e.target.value })}
+                hint={
+                  formData.deskripsiPublik.length > 0 && formData.deskripsiPublik.trim().length < 10 ? (
+                    <span className="text-warning">
                       Minimal 10 karakter (kurang {10 - formData.deskripsiPublik.trim().length} karakter lagi)
                     </span>
-                  )}
+                  ) : undefined
+                }
+              />
+
+              <TextArea
+                label="Ciri Rahasia / Bukti Kepemilikan (Privat)"
+                action={
+                  <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1">
+                    <span className="text-xs tabular-nums text-muted">
+                      {formData.ciriRahasia.length}/500
+                    </span>
+                    <span className="flex items-center gap-1 text-xs font-semibold text-warning">
+                      <ShieldAlert className="size-3.5" aria-hidden="true" />
+                      <span>Hanya dilihat petugas</span>
+                    </span>
+                  </div>
+                }
+                rows={2}
+                maxLength={500}
+                placeholder="Contoh: ada stiker di bagian bawah, foto di dalam dompet, wallpaper kunci layar..."
+                value={formData.ciriRahasia}
+                onChange={(e) => setFormData({ ...formData, ciriRahasia: e.target.value })}
+              />
+
+              <div className="space-y-2">
+                <p className="text-[13px] font-semibold text-ink">Foto Barang (Opsional, maks 3)</p>
+                <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                  {photos.map((photo) => (
+                    <div key={photo.id} className="relative">
+                      <img
+                        src={photo.preview}
+                        alt="Pratinjau foto"
+                        className="h-24 w-full rounded-surface border border-line bg-surface-muted object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(photo.id)}
+                        className="absolute -right-1 -top-1 flex size-11 items-center justify-center rounded-full"
+                        aria-label="Hapus foto"
+                      >
+                        <span className="flex size-7 items-center justify-center rounded-full bg-danger text-inverse shadow-card transition-colors hover:bg-danger/90">
+                          <X className="size-3.5" aria-hidden="true" />
+                        </span>
+                      </button>
+                    </div>
+                  ))}
                 </div>
 
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-slate-700 block">
-                      Ciri Rahasia / Bukti Kepemilikan (Privat)
+                {photos.length < MAX_PHOTOS ? (
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {/* Camera: langsung buka kamera belakang di ponsel */}
+                    <label
+                      className="flex min-h-24 cursor-pointer select-none flex-col items-center justify-center gap-1 rounded-surface border border-dashed border-line-strong bg-surface-muted px-2 py-3 transition-colors hover:border-accent/50 hover:bg-accent/5"
+                      title="Ambil foto langsung"
+                    >
+                      <Camera className="size-5 text-accent" aria-hidden="true" />
+                      <span className="text-[13px] font-semibold text-ink">Ambil Foto</span>
+                      <span className="text-xs text-muted">Kamera langsung</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        className="sr-only"
+                        onChange={(event) => {
+                          const files = Array.from(event.target.files || []);
+                          addPhotos(files);
+                          event.target.value = '';
+                        }}
+                      />
                     </label>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-slate-400">
-                        {formData.ciriRahasia.length}/500
-                      </span>
-                      <span className="text-[10px] text-amber-600 font-semibold flex items-center gap-1">
-                        <ShieldAlert className="w-3 h-3" />
-                        <span>Hanya dilihat petugas</span>
-                      </span>
-                    </div>
+
+                    {/* Gallery: pilih dari galeri */}
+                    <label
+                      className="flex min-h-24 cursor-pointer select-none flex-col items-center justify-center gap-1 rounded-surface border border-dashed border-line-strong bg-surface-muted px-2 py-3 transition-colors hover:border-line-strong hover:bg-surface"
+                      title="Pilih dari galeri"
+                    >
+                      <Upload className="size-5 text-muted" aria-hidden="true" />
+                      <span className="text-[13px] font-semibold text-ink">Galeri</span>
+                      <span className="text-xs text-muted">Pilih dari file</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="sr-only"
+                        onChange={(event) => {
+                          const files = Array.from(event.target.files || []);
+                          addPhotos(files);
+                          event.target.value = '';
+                        }}
+                      />
+                    </label>
                   </div>
-                  <textarea
-                    rows={2}
-                    maxLength={500}
-                    placeholder="Contoh: ada stiker di bagian bawah, foto di dalam dompet, wallpaper kunci layar..."
-                    value={formData.ciriRahasia}
-                    onChange={(e) => setFormData({ ...formData, ciriRahasia: e.target.value })}
-                    className="form-input w-full"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-700 block">Foto Barang (Opsional, maks 3)</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                    {photos.map((photo) => (
-                      <div key={photo.id} className="relative group">
-                        <img
-                          src={photo.preview}
-                          alt="Pratinjau foto"
-                          className="w-full h-24 rounded-xl object-cover border border-slate-200 bg-slate-100"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removePhoto(photo.id)}
-                          className="absolute -top-1 -right-1 flex h-11 w-11 items-center justify-center rounded-full"
-                          aria-label="Hapus foto"
-                        >
-                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-rose-600 text-white shadow-md transition-colors hover:bg-rose-700">
-                            <X className="w-3.5 h-3.5" />
-                          </span>
-                        </button>
-                      </div>
-                    ))}
+                ) : (
+                  <div className="flex min-h-24 items-center justify-center rounded-surface border border-dashed border-line-strong bg-surface-muted px-4 text-center text-xs text-muted">
+                    Maksimal {MAX_PHOTOS} foto tercapai
                   </div>
-
-                  {photos.length < MAX_PHOTOS ? (
-                    <div className="grid grid-cols-2 gap-2.5">
-                      {/* Camera: langsung buka kamera belakang di ponsel */}
-                      <label className="flex flex-col items-center justify-center gap-1 border-2 border-dashed border-sky-300 bg-sky-50/60 rounded-xl h-20 cursor-pointer hover:bg-sky-50 active:bg-sky-100 transition-colors select-none" title="Ambil foto langsung">
-                        <Camera className="w-5 h-5 text-sky-600" />
-                        <span className="text-[11px] text-sky-700 font-semibold">Ambil Foto</span>
-                        <span className="text-[9px] text-sky-500">Kamera langsung</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          capture="environment"
-                          className="sr-only"
-                          onChange={(event) => {
-                            const files = Array.from(event.target.files || []);
-                            addPhotos(files);
-                            event.target.value = '';
-                          }}
-                        />
-                      </label>
-
-                      {/* Gallery: pilih dari galeri */}
-                      <label className="flex flex-col items-center justify-center gap-1 border-2 border-dashed border-slate-200 rounded-xl h-20 cursor-pointer hover:bg-slate-50 active:bg-slate-100 transition-colors select-none" title="Pilih dari galeri">
-                        <Upload className="w-5 h-5 text-slate-400" />
-                        <span className="text-[11px] text-slate-600 font-semibold">Galeri</span>
-                        <span className="text-[9px] text-slate-400">Pilih dari file</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          multiple
-                          className="sr-only"
-                          onChange={(event) => {
-                            const files = Array.from(event.target.files || []);
-                            addPhotos(files);
-                            event.target.value = '';
-                          }}
-                        />
-                      </label>
-                    </div>
-                  ) : (
-                    <div className="border-2 border-dashed border-slate-200 rounded-xl h-20 flex items-center justify-center bg-slate-50 text-xs text-slate-400">
-                      Maksimal {MAX_PHOTOS} foto tercapai
-                    </div>
-                  )}
-                  <span className="text-[10px] text-slate-400 block leading-relaxed">Format PNG, JPG, atau WEBP maks 5MB tiap foto{reportType === 'temuan' ? ' · foto akan diburamkan untuk privasi' : ''}. Di ponsel, tombol <span className="font-semibold text-sky-600">Ambil Foto</span> langsung membuka kamera.</span>
-                </div>
-
-                <div className="pt-4 flex justify-between">
-                  <button
-                    type="button"
-                    onClick={() => setCurrentStep(1)}
-                    className="btn-secondary text-xs"
-                  >
-                    <ArrowLeft className="w-3.5 h-3.5" />
-                    <span>Kembali</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!formData.deskripsiPublik.trim()) {
-                        toast.error('Harap isi deskripsi publik terlebih dahulu.');
-                        return;
-                      }
-                      if (formData.deskripsiPublik.trim().length < 10) {
-                        toast.error('Deskripsi publik minimal 10 karakter agar mudah dikenali.');
-                        return;
-                      }
-                      setCurrentStep(3);
-                    }}
-                    className="btn-primary text-xs"
-                  >
-                    <span>Lanjut ke Konfirmasi</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                )}
+                <span className="block text-xs leading-5 text-muted">
+                  Format PNG, JPG, atau WEBP maks 5MB tiap foto{reportType === 'temuan' ? ' · foto akan diburamkan untuk privasi' : ''}. Di ponsel, tombol <span className="font-semibold text-accent">Ambil Foto</span> langsung membuka kamera.
+                </span>
               </div>
-            )}
 
-            {/* Step 3: Kontak & Konfirmasi */}
-            {currentStep === 3 && (
-              <div className="space-y-4">
-                <div className="pb-3 border-b border-slate-100">
-                  <h2 className="text-base font-bold text-[#123356]">Kontak Pelapor &amp; Pernyataan</h2>
-                  <p className="text-xs text-slate-500">Pastikan informasi kontak Anda dapat dihubungi.</p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Nama Lengkap</label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.namaPelapor}
-                      onChange={(e) => setFormData({ ...formData, namaPelapor: e.target.value })}
-                      className="form-input w-full"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Email Perusahaan</label>
-                    <input
-                      type="email"
-                      required
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="form-input w-full"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">Nomor WhatsApp / Telepon</label>
-                  <input
-                    type="tel"
-                    required
-                    maxLength={16}
-                    placeholder="Contoh: 081234567890"
-                    value={formData.telepon}
-                    onChange={(e) => setFormData({ ...formData, telepon: sanitizePhoneInput(e.target.value) })}
-                    className="form-input w-full"
-                  />
-                  <span className="text-[10px] text-slate-400 block">
-                    Gunakan nomor aktif (awalan 08 atau 628 dengan 10–15 digit) agar petugas dapat menghubungi Anda.
-                  </span>
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-start gap-2.5">
-                  <input
-                    type="checkbox"
-                    id="setuju"
-                    checked={formData.setuju}
-                    onChange={(e) => setFormData({ ...formData, setuju: e.target.checked })}
-                    className="w-4 h-4 rounded text-sky-600 border-slate-300 mt-0.5"
-                  />
-                  <label htmlFor="setuju" className="select-none leading-relaxed">
-                    Saya menyatakan informasi di atas benar dan bersedia dihubungi petugas posko untuk keperluan verifikasi pengembalian barang.
-                  </label>
-                </div>
-                <div className="pt-4 flex justify-between">
-                  <button
-                    type="button"
-                    onClick={() => setCurrentStep(2)}
-                    className="btn-secondary text-xs"
-                  >
-                    <ArrowLeft className="w-3.5 h-3.5" />
-                    <span>Kembali</span>
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="btn-primary text-xs py-2.5 px-6 shadow-md disabled:opacity-50 flex items-center gap-2"
-                  >
-                    <span>{isSubmitting ? 'Mengirim Laporan...' : 'Kirim Laporan Resmi'}</span>
-                  </button>
-                </div>
+              <div className="flex flex-col-reverse gap-3 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between">
+                <Button type="button" variant="secondary" onClick={() => setCurrentStep(1)} className="w-full sm:w-auto">
+                  <ArrowLeft className="size-4" aria-hidden="true" />
+                  <span>Kembali</span>
+                </Button>
+                <Button
+                  type="button"
+                  className="w-full sm:w-auto"
+                  onClick={() => {
+                    if (!formData.deskripsiPublik.trim()) {
+                      toast.error('Harap isi deskripsi publik terlebih dahulu.');
+                      return;
+                    }
+                    if (formData.deskripsiPublik.trim().length < 10) {
+                      toast.error('Deskripsi publik minimal 10 karakter agar mudah dikenali.');
+                      return;
+                    }
+                    setCurrentStep(3);
+                  }}
+                >
+                  <span>Lanjut ke Konfirmasi</span>
+                  <ArrowRight className="size-4" aria-hidden="true" />
+                </Button>
               </div>
-            )}
+            </div>
+          )}
 
-          </form>
+          {/* Step 3: Kontak & Konfirmasi */}
+          {currentStep === 3 && (
+            <div className="space-y-6">
+              <div className="space-y-1 border-b border-line pb-4">
+                <h2 className="text-[17px] font-semibold text-ink">Kontak Pelapor &amp; Pernyataan</h2>
+                <p className="text-[13px] leading-5 text-muted">Pastikan informasi kontak Anda dapat dihubungi.</p>
+              </div>
 
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <TextInput
+                  label="Nama Lengkap"
+                  type="text"
+                  required
+                  value={formData.namaPelapor}
+                  onChange={(e) => setFormData({ ...formData, namaPelapor: e.target.value })}
+                />
+
+                <TextInput
+                  label="Email Perusahaan"
+                  type="email"
+                  required
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                />
+              </div>
+
+              <TextInput
+                label="Nomor WhatsApp / Telepon"
+                type="tel"
+                required
+                maxLength={16}
+                placeholder="Contoh: 081234567890"
+                value={formData.telepon}
+                onChange={(e) => setFormData({ ...formData, telepon: sanitizePhoneInput(e.target.value) })}
+                hint="Gunakan nomor aktif (awalan 08 atau 628 dengan 10–15 digit) agar petugas dapat menghubungi Anda."
+              />
+
+              <div className="flex items-start gap-2.5 rounded-surface border border-line bg-surface-muted p-4 text-[13px] leading-5 text-body">
+                <input
+                  type="checkbox"
+                  id="setuju"
+                  checked={formData.setuju}
+                  onChange={(e) => setFormData({ ...formData, setuju: e.target.checked })}
+                  className="mt-0.5 size-4 rounded border-line-strong accent-accent"
+                />
+                <label htmlFor="setuju" className="select-none">
+                  Saya menyatakan informasi di atas benar dan bersedia dihubungi petugas posko untuk keperluan verifikasi pengembalian barang.
+                </label>
+              </div>
+
+              <div className="flex flex-col-reverse gap-3 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between">
+                <Button type="button" variant="secondary" onClick={() => setCurrentStep(2)} className="w-full sm:w-auto">
+                  <ArrowLeft className="size-4" aria-hidden="true" />
+                  <span>Kembali</span>
+                </Button>
+                <Button type="submit" loading={isSubmitting} disabled={isSubmitting} className="w-full sm:w-auto">
+                  <span>{isSubmitting ? 'Mengirim Laporan...' : 'Kirim Laporan Resmi'}</span>
+                </Button>
+              </div>
+            </div>
+          )}
+        </form>
       </div>
 
       {/* Success Modal Pop-up */}
       <Dialog open={isSuccess} onOpenChange={setIsSuccess}>
         <DialogPortal>
-          <DialogOverlay className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 animate-in fade-in-0" />
-          <DialogContent className="fixed left-[50%] top-[50%] z-50 w-[calc(100%-2rem)] max-w-md translate-x-[-50%] translate-y-[-50%] bg-white rounded-3xl shadow-2xl p-6 sm:p-7 border border-slate-100 text-center space-y-5 animate-in zoom-in-95">
+          <DialogOverlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+          <DialogContent className="fixed left-[50%] top-[50%] z-50 max-h-[90dvh] w-[calc(100%-2rem)] max-w-md translate-x-[-50%] translate-y-[-50%] space-y-5 overflow-y-auto rounded-card border border-line bg-surface p-6 text-center shadow-overlay data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:p-7">
             <button
               type="button"
               onClick={() => setIsSuccess(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 transition-colors"
+              className="absolute right-3 top-3 flex size-11 items-center justify-center rounded-control text-muted transition-colors hover:bg-surface-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
               aria-label="Tutup modal"
             >
-              <X className="w-5 h-5" />
+              <X className="size-5" />
             </button>
 
-            <div className="w-13 h-13 rounded-2xl bg-emerald-50 text-emerald-600 ring-6 ring-emerald-50/70 mx-auto flex items-center justify-center">
-              <CheckCircle2 className="w-7 h-7" />
+            <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-success-soft text-success">
+              <CheckCircle2 className="size-6" aria-hidden="true" />
             </div>
 
             <div className="space-y-1.5">
-              <span className="text-[11px] font-extrabold text-emerald-700 uppercase tracking-widest block">
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-success">
                 Laporan Berhasil Disimpan
               </span>
-              <DialogTitle className="text-xl sm:text-2xl font-black text-[#123356] tracking-tight">
+              <DialogTitle className="text-xl font-semibold text-ink sm:text-2xl">
                 Laporan Anda Telah Terdaftar
               </DialogTitle>
-              <DialogDescription className="text-xs text-slate-500 mt-1 max-w-sm mx-auto leading-relaxed">
+              <DialogDescription className="mx-auto mt-1 max-w-sm text-[13px] leading-5 text-body">
                 Petugas posko keamanan akan memverifikasi dan mencocokkan ciri barang Anda di sistem kantor.
               </DialogDescription>
             </div>
 
             {/* Dedicated Ticket Code Card */}
-            <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-3.5 flex items-center justify-between gap-3 text-left">
-              <div className="space-y-0.5 min-w-0">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+            <div className="flex items-center justify-between gap-3 rounded-surface border border-line bg-surface-muted p-3.5 text-left">
+              <div className="min-w-0 space-y-0.5">
+                <span className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
                   Nomor Tiket Resmi
                 </span>
-                <span className="font-mono text-base sm:text-lg font-extrabold text-[#123356] tracking-wider block truncate select-all">
+                <span className="block select-all truncate font-mono text-base font-semibold tabular-nums tracking-wider text-ink sm:text-lg">
                   {submittedReportCode || 'Menunggu kode laporan'}
                 </span>
               </div>
-              <button
+              <Button
                 type="button"
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (!submittedReportCode) return;
                   navigator.clipboard.writeText(submittedReportCode);
@@ -882,50 +906,50 @@ function ReportForm() {
                   setTimeout(() => setIsCopied(false), 2000);
                 }}
                 title="Salin nomor tiket"
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all bg-white hover:bg-sky-50 text-sky-800 border border-slate-200 shadow-2xs hover:border-sky-300 min-h-[38px] shrink-0"
+                className="shrink-0"
               >
                 {isCopied ? (
                   <>
-                    <CheckCheck className="w-3.5 h-3.5 text-emerald-600" />
-                    <span className="text-emerald-700">Tersalin</span>
+                    <CheckCheck className="size-3.5 text-success" aria-hidden="true" />
+                    <span className="text-success">Tersalin</span>
                   </>
                 ) : (
                   <>
-                    <Copy className="w-3.5 h-3.5 text-slate-400" />
+                    <Copy className="size-3.5 text-muted" aria-hidden="true" />
                     <span>Salin</span>
                   </>
                 )}
-              </button>
+              </Button>
             </div>
 
-            <div className="pt-2 flex flex-col sm:flex-row justify-center gap-2.5">
-              <button
+            <div className="flex flex-col justify-center gap-2.5 pt-2 sm:flex-row">
+              <Button
                 type="button"
                 onClick={() => handleSuccessNavigate(submittedReportId ? `/lacak?report=${submittedReportId}` : '/lacak')}
-                className="btn-primary text-xs py-2.5 px-4 shadow-sm min-h-[44px] flex-1 inline-flex items-center justify-center gap-1.5 font-bold"
+                className="flex-1"
               >
                 <span>Lacak Status Laporan</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-              <button
+                <ArrowRight className="size-4" aria-hidden="true" />
+              </Button>
+              <Button
                 type="button"
+                variant="secondary"
                 onClick={() => handleSuccessNavigate('/dashboard')}
-                className="btn-secondary text-xs py-2.5 px-4 min-h-[44px] flex-1 font-semibold"
+                className="flex-1"
               >
                 Kembali ke Dashboard
-              </button>
+              </Button>
             </div>
           </DialogContent>
         </DialogPortal>
       </Dialog>
-
     </div>
   );
 }
 
 export default function ReportPage() {
   return (
-    <Suspense fallback={<div className="max-w-3xl mx-auto px-4 py-16 text-center text-slate-500">Memuat formulir laporan...</div>}>
+    <Suspense fallback={<div className="mx-auto max-w-3xl px-4 py-16 text-center text-sm text-muted">Memuat formulir laporan...</div>}>
       <ReportForm />
     </Suspense>
   );

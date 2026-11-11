@@ -3,12 +3,15 @@
 import { Suspense, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowRight, Eye, EyeOff, Lock, Mail, UserRound } from 'lucide-react';
+import { ArrowRight, ChevronDown, Eye, EyeOff } from 'lucide-react';
 import { signUpUser } from '@/lib/supabase/auth';
 import { getAuthRedirectPath } from '@/lib/supabase/redirect';
 import { getAllowedEmailDomains } from '@/lib/supabase/config';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { AuthShell } from '@/components/AuthShell';
+import { TextInput } from '@/components/ui/Field';
+import { Button } from '@/components/ui/Button';
 
 function getRegistrationError(error: { code?: string; status?: number; name?: string; message?: string }) {
   if (error.name === 'AuthDomainError' || error.message?.includes('email perusahaan') || error.message?.includes('Domain email')) {
@@ -132,109 +135,157 @@ function RegisterContent() {
   };
 
   return (
-    <div className="min-h-[85vh] flex items-center justify-center px-4 sm:px-6 lg:px-8 py-12">
-      <div className="w-full max-w-lg apple-card bg-white p-8 sm:p-10">
-        <div className="space-y-2 mb-8">
-          <span className="text-xs font-bold text-sky-700 uppercase tracking-widest">Registrasi karyawan</span>
-          <h1 className="text-2xl font-extrabold text-[#123356]">Buat akun</h1>
-          <p className="text-xs text-slate-500">Daftar menggunakan email perusahaan ({domainHint}) untuk mengirim laporan dan mengikuti proses klaim.</p>
+    <AuthShell>
+      <div className="space-y-6">
+        <div className="space-y-1.5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
+            Registrasi karyawan
+          </p>
+          <h1 className="text-balance text-2xl font-semibold tracking-tight text-ink">Buat akun</h1>
+          <p className="text-pretty text-[13px] leading-5 text-body">
+            Daftar menggunakan email perusahaan ({domainHint}) untuk mengirim laporan dan mengikuti proses klaim.
+          </p>
         </div>
 
         {confirmationEmail ? (
-          <div role="status" className="space-y-4 rounded-xl border border-sky-200 bg-sky-50 p-5 text-sm text-sky-900">
-            <h2 className="font-bold">Cek email kamu</h2>
-            <p className="break-words">Jika pendaftaran dapat diproses, tautan konfirmasi akan dikirim ke {confirmationEmail}. Periksa kotak masuk dan folder spam, lalu konfirmasi email sebelum masuk.</p>
-            <Link href={loginUrl} className="btn-primary min-h-11 justify-center">Lanjut ke halaman masuk</Link>
+          <div role="status" className="space-y-4 rounded-surface border border-info/20 bg-info-soft p-5 text-[13px] leading-5 text-body">
+            <h2 className="text-sm font-semibold text-ink">Cek email kamu</h2>
+            <p className="break-words">
+              Jika pendaftaran dapat diproses, tautan konfirmasi akan dikirim ke {confirmationEmail}. Periksa kotak masuk dan folder spam, lalu konfirmasi email sebelum masuk.
+            </p>
+            <Link href={loginUrl} className="btn-primary w-full">
+              Lanjut ke halaman masuk
+            </Link>
           </div>
         ) : (
-        <form onSubmit={handleRegister} className="space-y-4" noValidate aria-busy={isLoading} aria-describedby={error ? 'registration-error' : undefined}>
-          {error && (
-            <div id="registration-error" role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
-              {error}
-            </div>
-          )}
-
-          <fieldset disabled={isLoading} className="space-y-4">
-          <label className="space-y-1.5 block">
-            <span className="text-xs font-bold text-slate-700">Nama lengkap</span>
-            <div className="flex items-center gap-2 form-input w-full focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-500/20">
-              <UserRound className="w-4 h-4 text-slate-400" aria-hidden="true" />
-              <input required autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} className="flex-1 bg-transparent outline-none text-sm min-w-0" placeholder="Nama lengkap" />
-            </div>
-          </label>
-
-          <label className="space-y-1.5 block">
-            <span className="text-xs font-bold text-slate-700">Email perusahaan</span>
-            <div className="flex items-center gap-2 form-input w-full focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-500/20">
-              <Mail className="w-4 h-4 text-slate-400" aria-hidden="true" />
-              <input required type="email" autoComplete="email" autoCapitalize="none" spellCheck={false} value={email} onChange={(event) => setEmail(event.target.value)} className="flex-1 bg-transparent outline-none text-sm min-w-0" placeholder={allowedDomains[0] ? `nama@${allowedDomains[0]}` : 'nama@perusahaan.com'} />
-            </div>
-          </label>
-
-          <div className="space-y-1.5">
-            <label htmlFor="registration-password" className="text-xs font-bold text-slate-700 block">Password</label>
-            <div className="flex items-center gap-2 form-input w-full focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-500/20">
-              <Lock className="w-4 h-4 text-slate-400" aria-hidden="true" />
-              <input id="registration-password" required type={showPassword ? 'text' : 'password'} minLength={8} autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} className="flex-1 bg-transparent outline-none text-sm min-w-0" placeholder="Minimal 8 karakter" />
-              <button
-                type="button"
-                onClick={() => setShowPassword((visible) => !visible)}
-                aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
-                aria-controls="registration-password"
-                className="-my-2 -mr-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate-600 transition-colors hover:text-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
-              >
-                {showPassword ? <EyeOff className="w-4 h-4" aria-hidden="true" /> : <Eye className="w-4 h-4" aria-hidden="true" />}
-              </button>
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <label htmlFor="registration-confirm-password" className="text-xs font-bold text-slate-700 block">Konfirmasi password</label>
-            <div className="flex items-center gap-2 form-input w-full focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-500/20">
-              <Lock className="w-4 h-4 text-slate-400" aria-hidden="true" />
-              <input id="registration-confirm-password" required type={showConfirmPassword ? 'text' : 'password'} minLength={8} autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className="flex-1 bg-transparent outline-none text-sm min-w-0" placeholder="Ulangi password" />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword((visible) => !visible)}
-                aria-label={showConfirmPassword ? 'Sembunyikan konfirmasi password' : 'Tampilkan konfirmasi password'}
-                aria-controls="registration-confirm-password"
-                className="-my-2 -mr-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate-600 transition-colors hover:text-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
-              >
-                {showConfirmPassword ? <EyeOff className="w-4 h-4" aria-hidden="true" /> : <Eye className="w-4 h-4" aria-hidden="true" />}
-              </button>
-            </div>
-          </div>
-
-          <details>
-            <summary className="min-h-11 cursor-pointer py-3 text-xs font-medium text-slate-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700">Data karyawan (opsional)</summary>
-            <div className="space-y-4 pt-2">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <label className="space-y-1.5 block"><span className="text-xs font-bold text-slate-700">Departemen/Divisi (opsional)</span><input value={department} onChange={(event) => setDepartment(event.target.value)} className="form-input w-full" placeholder="Contoh: Operasional" /></label>
-                <label className="space-y-1.5 block"><span className="text-xs font-bold text-slate-700">ID Karyawan (opsional)</span><input value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} className="form-input w-full" placeholder="Nomor/ID karyawan" /></label>
+          <form onSubmit={handleRegister} className="space-y-5" noValidate aria-busy={isLoading} aria-describedby={error ? 'registration-error' : undefined}>
+            {error && (
+              <div id="registration-error" role="alert" className="rounded-control border border-danger/20 bg-danger-soft px-3 py-2.5 text-[13px] leading-5 text-danger">
+                {error}
               </div>
-            </div>
-          </details>
+            )}
 
-          <button type="submit" disabled={isLoading} className="w-full btn-primary py-3 justify-center disabled:opacity-50">
-            <span>{isLoading ? 'Mendaftarkan akun...' : 'Buat Akun'}</span>
-            <ArrowRight className="w-4 h-4" aria-hidden="true" />
-          </button>
-          </fieldset>
-        </form>
+            <fieldset disabled={isLoading} className="space-y-5">
+              <TextInput
+                label="Nama lengkap"
+                required
+                autoComplete="name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="Nama lengkap"
+              />
+
+              <TextInput
+                label="Email perusahaan"
+                required
+                type="email"
+                autoComplete="email"
+                autoCapitalize="none"
+                spellCheck={false}
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder={allowedDomains[0] ? `nama@${allowedDomains[0]}` : 'nama@perusahaan.com'}
+              />
+
+              <div className="space-y-1.5">
+                <label htmlFor="registration-password" className="block text-[13px] font-semibold text-ink">
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    id="registration-password"
+                    required
+                    type={showPassword ? 'text' : 'password'}
+                    minLength={8}
+                    autoComplete="new-password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    className="form-input w-full pr-12"
+                    placeholder="Minimal 8 karakter"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((visible) => !visible)}
+                    aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+                    aria-controls="registration-password"
+                    className="absolute right-0 top-0 inline-flex size-11 items-center justify-center rounded-control text-muted transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                  >
+                    {showPassword ? <EyeOff className="size-4" aria-hidden="true" /> : <Eye className="size-4" aria-hidden="true" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label htmlFor="registration-confirm-password" className="block text-[13px] font-semibold text-ink">
+                  Konfirmasi password
+                </label>
+                <div className="relative">
+                  <input
+                    id="registration-confirm-password"
+                    required
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    minLength={8}
+                    autoComplete="new-password"
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    className="form-input w-full pr-12"
+                    placeholder="Ulangi password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((visible) => !visible)}
+                    aria-label={showConfirmPassword ? 'Sembunyikan konfirmasi password' : 'Tampilkan konfirmasi password'}
+                    aria-controls="registration-confirm-password"
+                    className="absolute right-0 top-0 inline-flex size-11 items-center justify-center rounded-control text-muted transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                  >
+                    {showConfirmPassword ? <EyeOff className="size-4" aria-hidden="true" /> : <Eye className="size-4" aria-hidden="true" />}
+                  </button>
+                </div>
+              </div>
+
+              <details className="group rounded-surface border border-line bg-surface-muted px-4">
+                <summary className="flex min-h-11 cursor-pointer select-none items-center justify-between gap-3 text-[13px] font-medium text-body">
+                  <span>Data karyawan (opsional)</span>
+                  <ChevronDown className="size-4 shrink-0 text-muted transition-transform duration-150 group-open:rotate-180" aria-hidden="true" />
+                </summary>
+                <div className="grid grid-cols-1 gap-5 pb-4 pt-1 sm:grid-cols-2">
+                  <TextInput
+                    label="Departemen/Divisi (opsional)"
+                    value={department}
+                    onChange={(event) => setDepartment(event.target.value)}
+                    placeholder="Contoh: Operasional"
+                  />
+                  <TextInput
+                    label="ID Karyawan (opsional)"
+                    value={employeeId}
+                    onChange={(event) => setEmployeeId(event.target.value)}
+                    placeholder="Nomor/ID karyawan"
+                  />
+                </div>
+              </details>
+
+              <Button type="submit" size="lg" loading={isLoading} disabled={isLoading} className="w-full">
+                <span>{isLoading ? 'Mendaftarkan akun...' : 'Buat Akun'}</span>
+                {!isLoading && <ArrowRight className="size-4" aria-hidden="true" />}
+              </Button>
+            </fieldset>
+          </form>
         )}
 
-        <p className="text-xs text-center text-slate-500 mt-6">
+        <p className="border-t border-line pt-5 text-center text-[13px] text-body">
           Sudah punya akun?{' '}
-          <Link href={loginUrl} className="font-bold text-sky-700 hover:underline">Masuk di sini</Link>
+          <Link href={loginUrl} className="font-semibold text-accent transition-colors hover:text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40">
+            Masuk di sini
+          </Link>
         </p>
       </div>
-    </div>
+    </AuthShell>
   );
 }
 
 export default function RegisterPage() {
   return (
-    <Suspense fallback={<div className="px-4 py-12 text-center text-sm text-slate-600">Memuat halaman daftar...</div>}>
+    <Suspense fallback={<div className="px-4 py-12 text-center text-sm text-muted">Memuat halaman daftar...</div>}>
       <RegisterContent />
     </Suspense>
   );

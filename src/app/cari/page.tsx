@@ -2,10 +2,13 @@
 
 import { useState, useMemo, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
-import { Search, MapPin, Clock, Filter, RotateCcw, AlertCircle, ChevronDown } from 'lucide-react';
+import { Search, Filter, RotateCcw, AlertCircle, ChevronDown } from 'lucide-react';
 import { fetchCatalogItems, type CatalogItem } from '@/lib/supabase/items';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { ItemCard } from '@/components/ItemCard';
 
 function SearchContent() {
   const searchParams = useSearchParams();
@@ -91,30 +94,55 @@ function SearchContent() {
       : new Date(second.foundAt).getTime() - new Date(first.foundAt).getTime());
   }, [items, query, selectedLocation, selectedCategories, selectedLocations, sortBy, timeRange, now]);
 
+  const hasActiveFilters =
+    selectedCategories.length > 0 || selectedLocations.length > 0 || query || selectedLocation || timeRange !== 'all';
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      
-      {/* Top Search Bar (Figma Smart Search Header) */}
-      <div className="apple-card p-4 sm:p-5 bg-white/90 backdrop-blur-md">
-        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
-          
-          {/* Search Input */}
-          <div className="sm:col-span-5 relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+    <div className="mx-auto max-w-7xl space-y-8 px-4 py-10 sm:px-6 lg:px-8">
+      <PageHeader
+        title="Barang yang mungkin cocok"
+        description={`Menampilkan ${filteredItems.length} barang temuan terdaftar`}
+        actions={
+          <div className="flex items-center gap-2">
+            <label htmlFor="sort-results" className="text-xs text-muted">
+              Urutkan:
+            </label>
+            <select
+              id="sort-results"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="form-input min-h-11 py-2 pr-8 pl-3 text-sm"
+            >
+              <option value="newest">Terbaru ditemukan</option>
+              <option value="oldest">Terlama ditemukan</option>
+            </select>
+          </div>
+        }
+      />
+
+      {/* Search & quick filters */}
+      <div className="rounded-card border border-line bg-surface p-4 sm:p-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-12 sm:items-center">
+          <div className="relative sm:col-span-6">
+            <Search
+              className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted"
+              aria-hidden="true"
+            />
             <input
               type="text"
               placeholder="Cari dompet, kunci, tas, atau warna..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-white"
+              aria-label="Cari dompet, kunci, tas, atau warna..."
+              className="form-input w-full pl-10 pr-4 text-sm"
             />
           </div>
 
-          {/* Location Quick Select */}
           <div className="sm:col-span-3">
             <select
               value={selectedLocation}
               onChange={(e) => setSelectedLocation(e.target.value)}
+              aria-label="Semua Lokasi"
               className="form-input w-full text-sm"
             >
               <option value="">Semua Lokasi</option>
@@ -124,11 +152,11 @@ function SearchContent() {
             </select>
           </div>
 
-          {/* Time range */}
-          <div className="sm:col-span-2">
+          <div className="sm:col-span-3">
             <select
               value={timeRange}
               onChange={(e) => setTimeRange(e.target.value)}
+              aria-label="Semua waktu"
               className="form-input w-full text-sm"
             >
               <option value="all">Semua waktu</option>
@@ -137,222 +165,146 @@ function SearchContent() {
               <option value="30">30 hari terakhir</option>
             </select>
           </div>
-
-          {/* Search CTA */}
-          <div className="sm:col-span-2">
-            <button
-              onClick={() => {}}
-              className="w-full py-2.5 px-4 rounded-xl bg-[#123356] hover:bg-[#0c233c] text-white text-sm font-semibold flex items-center justify-center gap-2 transition-transform active:scale-95"
-            >
-              <Search className="w-4 h-4" />
-              <span>Cari Barang</span>
-            </button>
-          </div>
-
         </div>
       </div>
 
       {/* Main Content: Sidebar Filter + Cards Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
+      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
         {/* Left Sidebar Filter */}
-        <aside className="lg:col-span-3 apple-card p-5 space-y-4 lg:space-y-6">
-          <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
-            <h2 className="font-bold text-sm text-[#123356] flex items-center gap-2">
-              <Filter className="w-4 h-4 text-sky-600" />
+        <aside className="rounded-card border border-line bg-surface p-5 lg:col-span-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-3">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
+              <Filter className="size-4 text-muted" aria-hidden="true" />
               <span>Filter Pencarian</span>
             </h2>
-            <div className="flex items-center gap-3">
-              {(selectedCategories.length > 0 || selectedLocations.length > 0 || query || selectedLocation || timeRange !== 'all') && (
+            <div className="flex items-center gap-2">
+              {hasActiveFilters && (
                 <button
+                  type="button"
                   onClick={resetFilters}
-                  className="text-[11px] font-semibold text-rose-600 hover:text-rose-800 flex items-center gap-1"
+                  className="inline-flex min-h-9 items-center gap-1 text-xs font-semibold text-danger transition-colors hover:text-danger/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                 >
-                  <RotateCcw className="w-3 h-3" />
+                  <RotateCcw className="size-3" aria-hidden="true" />
                   <span>Reset</span>
                 </button>
               )}
               <button
                 type="button"
                 onClick={() => setFiltersOpen((open) => !open)}
-                className="lg:hidden inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[11px] font-semibold text-slate-700"
+                className="inline-flex min-h-11 items-center gap-1 rounded-control border border-line px-3 text-xs font-semibold text-body transition-colors hover:border-line-strong hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 lg:hidden"
                 aria-expanded={filtersOpen}
+                aria-controls="filter-panel"
               >
                 {filtersOpen ? 'Tutup' : 'Buka'}
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${filtersOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown
+                  className={`size-3.5 transition-transform ${filtersOpen ? 'rotate-180' : ''}`}
+                  aria-hidden="true"
+                />
               </button>
             </div>
           </div>
 
-          <div className={`${filtersOpen ? 'block space-y-6' : 'hidden'} lg:block lg:space-y-6`}>
-          {/* Category Filter */}
-          <div className="space-y-2.5">
-            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-              Kategori
-            </h3>
-            <div className="space-y-1">
-              {categories.map(cat => (
-                <label key={cat} className="flex items-center gap-2.5 min-h-11 text-xs text-slate-600 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={selectedCategories.includes(cat)}
-                    onChange={() => toggleCategory(cat)}
-                    className="w-4 h-4 rounded text-sky-600 border-slate-300 focus:ring-sky-500"
-                  />
-                  <span>{cat}</span>
-                </label>
-              ))}
+          <div id="filter-panel" className={`${filtersOpen ? 'block space-y-6' : 'hidden'} pt-5 lg:block lg:space-y-6`}>
+            {/* Category Filter */}
+            <div className="space-y-2">
+              <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
+                Kategori
+              </h3>
+              <div>
+                {categories.map(cat => (
+                  <label key={cat} className="flex min-h-11 cursor-pointer select-none items-center gap-2.5 text-[13px] text-body">
+                    <input
+                      type="checkbox"
+                      checked={selectedCategories.includes(cat)}
+                      onChange={() => toggleCategory(cat)}
+                      className="size-4 rounded border-line-strong accent-accent focus:ring-2 focus:ring-accent/30"
+                    />
+                    <span>{cat}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Location Filter */}
+            <div className="space-y-2 border-t border-line pt-4">
+              <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
+                Lokasi Ditemukan
+              </h3>
+              <div>
+                {locations.map(loc => (
+                  <label key={loc} className="flex min-h-11 cursor-pointer select-none items-center gap-2.5 text-[13px] text-body">
+                    <input
+                      type="checkbox"
+                      checked={selectedLocations.includes(loc)}
+                      onChange={() => toggleLocation(loc)}
+                      className="size-4 rounded border-line-strong accent-accent focus:ring-2 focus:ring-accent/30"
+                    />
+                    <span>{loc}</span>
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
-
-          {/* Location Filter */}
-          <div className="space-y-2.5 pt-4 border-t border-slate-100">
-            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-              Lokasi Ditemukan
-            </h3>
-            <div className="space-y-1">
-              {locations.map(loc => (
-                <label key={loc} className="flex items-center gap-2.5 min-h-11 text-xs text-slate-600 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={selectedLocations.includes(loc)}
-                    onChange={() => toggleLocation(loc)}
-                    className="w-4 h-4 rounded text-sky-600 border-slate-300 focus:ring-sky-500"
-                  />
-                  <span>{loc}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-          </div>
-
         </aside>
 
         {/* Right Column: Search Results */}
-        <section className="lg:col-span-9 space-y-6">
-          
-          {/* Results Summary Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-200 gap-2">
-            <div>
-              <h2 className="text-xl font-extrabold text-[#123356]">
-                Barang yang mungkin cocok
-              </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Menampilkan {filteredItems.length} barang temuan terdaftar
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500">Urutkan:</span>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="form-input text-xs py-1.5 px-3"
-              >
-                <option value="newest">Terbaru ditemukan</option>
-                <option value="oldest">Terlama ditemukan</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Cards Grid */}
+        <section className="space-y-6 lg:col-span-9">
           {isLoading ? (
-            <div className="apple-card p-12 text-center text-sm text-slate-500">Memuat katalog...</div>
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true" aria-label="Memuat katalog">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <div key={index} className="overflow-hidden rounded-card border border-line bg-surface">
+                  <Skeleton variant="rectangular" className="aspect-4/3 w-full rounded-none" />
+                  <div className="space-y-3 p-5">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-1/2" />
+                    <Skeleton className="h-3 w-full" />
+                    <Skeleton className="h-11 w-full rounded-control" />
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : catalogError ? (
-            <div role="alert" className="apple-card p-12 text-center text-sm text-rose-700">{catalogError}</div>
+            <div role="alert" className="rounded-card border border-danger/20 bg-danger-soft px-6 py-10 text-center text-sm text-danger">
+              {catalogError}
+            </div>
           ) : filteredItems.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {filteredItems.map((item, index) => (
-                <article
-                  key={item.id}
-                  className="apple-card group flex flex-col overflow-hidden bg-white"
-                >
-                  <div className="relative h-44 w-full bg-slate-100 overflow-hidden">
-                    {item.image ? (
-                      <Image
-                        src={item.image}
-                        alt={item.title}
-                        fill
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                        className="object-cover transition-transform duration-300 group-hover:scale-105"
-                        priority={index === 0}
-                      />
-                    ) : <div className="h-full w-full bg-slate-200" aria-label="Foto belum tersedia" />}
-                    <span className="absolute top-2.5 right-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/95 backdrop-blur-md text-slate-800 shadow-xs uppercase">
-                      {item.categoryTag}
-                    </span>
-                  </div>
-
-                  <div className="p-4 flex flex-col flex-1">
-                    <h3 className="font-bold text-base text-[#123356] group-hover:text-sky-700 transition-colors">
-                      {item.title}
-                    </h3>
-
-                    <div className="flex items-center gap-1.5 text-xs text-sky-700 font-semibold mt-1">
-                      <MapPin className="w-3.5 h-3.5 shrink-0" />
-                      <span className="truncate">{item.location}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-0.5">
-                      <Clock className="w-3.5 h-3.5 shrink-0" />
-                      <span>{item.date} · {item.time}</span>
-                    </div>
-
-                    <p className="text-xs text-slate-500 mt-2.5 line-clamp-2 leading-relaxed flex-1">
-                      {item.description}
-                    </p>
-
-                    <div className="pt-4 mt-auto">
-                      <Link
-                        href={`/barang/${item.id}`}
-                        className="w-full py-2 px-3 rounded-xl bg-slate-100 hover:bg-[#123356] hover:text-white text-[#123356] text-xs font-semibold text-center block transition-all"
-                      >
-                        Lihat Detail
-                      </Link>
-                    </div>
-                  </div>
-                </article>
+                <ItemCard key={item.id} item={item} showDate priority={index === 0} />
               ))}
             </div>
           ) : (
-            /* Empty State matching Figma Smart Search empty state */
-            <div className="apple-card p-12 text-center space-y-4">
-              <div className="w-16 h-16 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center">
-                <AlertCircle className="w-8 h-8" />
-              </div>
-              <div className="space-y-1">
-                <h3 className="font-bold text-lg text-[#123356]">Barang tidak ditemukan</h3>
-                <p className="text-sm text-slate-500 max-w-md mx-auto">
-                  Tidak ada barang yang cocok dengan kata kunci atau filter yang Anda pilih. Coba gunakan istilah umum atau reset filter.
-                </p>
-              </div>
-              <div className="pt-2 flex justify-center gap-3">
-                <button
-                  onClick={resetFilters}
-                  className="btn-secondary text-xs"
-                >
+            <EmptyState
+              icon={<AlertCircle className="size-6" aria-hidden="true" />}
+              title="Barang tidak ditemukan"
+              description="Tidak ada barang yang cocok dengan kata kunci atau filter yang Anda pilih. Coba gunakan istilah umum atau reset filter."
+              action={
+                <button type="button" onClick={resetFilters} className="btn-secondary">
                   Reset Filter
                 </button>
-                <Link
-                  href="/lapor?type=hilang"
-                  className="btn-primary text-xs"
-                >
+              }
+              secondary={
+                <Link href="/lapor?type=hilang" className="btn-primary">
                   Buat Laporan Barang Hilang
                 </Link>
-              </div>
-            </div>
+              }
+            />
           )}
-
         </section>
-
       </div>
-
     </div>
   );
 }
 
 export default function SearchPage() {
   return (
-    <Suspense fallback={<div className="max-w-7xl mx-auto px-4 py-12 text-center text-slate-500">Memuat katalog pencarian...</div>}>
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-7xl px-4 py-12 text-center text-sm text-muted">
+          Memuat katalog pencarian...
+        </div>
+      }
+    >
       <SearchContent />
     </Suspense>
   );

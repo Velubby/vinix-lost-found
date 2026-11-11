@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { ShieldAlert, RefreshCw, Clock, PackageCheck, MapPin, Calendar } from 'lucide-react';
+import { RefreshCw, Clock, PackageCheck, MapPin, Calendar } from 'lucide-react';
 import Image from 'next/image';
 import { toast } from 'sonner';
 
@@ -14,6 +14,8 @@ import { useClaims, useClaimStats, useUpdateClaim, useBulkUpdateClaims, useMarkC
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/Button';
 import { Modal, ConfirmModal } from '@/components/ui/Modal';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 import { AdminStatsOverview } from './components/AdminStatsOverview';
 import { AdminClaimsView } from './components/AdminClaimsView';
@@ -25,6 +27,12 @@ import { LostReportDetailModal } from './components/LostReportDetailModal';
 import { DEFAULT_PICKUP_LOCATION, PICKUP_LOCATIONS } from '@/lib/locations';
 
 const QUICK_LOCATIONS = PICKUP_LOCATIONS;
+
+const ADMIN_TABS = [
+  { id: 'klaim', label: 'Klaim Barang Temuan' },
+  { id: 'laporan-hilang', label: 'Laporan Barang Hilang' },
+  { id: 'konfirmasi', label: 'Konfirmasi Barang' },
+] as const;
 
 export default function AdminPage() {
   const router = useRouter();
@@ -61,6 +69,13 @@ export default function AdminPage() {
 
   // Copy Feedback
   const [copiedTicket, setCopiedTicket] = useState<string | null>(null);
+
+  // Keep the active tab visible when the rail scrolls horizontally on phones
+  const tabRailRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const activeTabButton = tabRailRef.current?.querySelector<HTMLElement>('[aria-pressed="true"]');
+    activeTabButton?.scrollIntoView({ block: 'nearest', inline: 'center' });
+  }, [activeTab]);
 
   // Debounce search query
   useEffect(() => {
@@ -385,7 +400,7 @@ export default function AdminPage() {
 
   if (isStaff === null) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-16 text-center text-slate-500">
+      <div className="mx-auto max-w-7xl px-4 py-20 text-center text-sm text-muted sm:px-6 lg:px-8">
         Memeriksa hak akses admin...
       </div>
     );
@@ -395,184 +410,143 @@ export default function AdminPage() {
     return null;
   }
 
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* Header */}
-      <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between border-b border-slate-200 pb-6">
-        <div>
-          <div className="flex items-center gap-2 text-sky-800">
-            <ShieldAlert className="w-5 h-5" />
-            <span className="text-xs font-bold uppercase tracking-wider">
-              Ruang Kerja Admin
-            </span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#123356] mt-1">
-            {activeTab === 'klaim' ? 'Verifikasi Klaim Barang' : 'Daftar Laporan Barang Hilang'}
-          </h1>
-          <p className="text-sm text-slate-600 mt-1">
-            {activeTab === 'klaim'
-              ? 'Cocokkan ciri rahasia dari pemohon sebelum menyetujui serah terima barang temuan.'
-              : 'Pantau dan kelola laporan kehilangan yang diajukan karyawan.'}
-          </p>
-        </div>
+  const tabCount: Record<(typeof ADMIN_TABS)[number]['id'], number> = {
+    klaim: tabCounts?.claims ?? stats?.pending ?? 0,
+    'laporan-hilang': tabCounts?.lostReports ?? 0,
+    konfirmasi: tabCounts?.confirmations ?? 0,
+  };
 
-        <div className="flex items-center gap-3">
+  return (
+    <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+      <PageHeader
+        eyebrow="Ruang Kerja Admin"
+        title={
+          activeTab === 'klaim'
+            ? 'Verifikasi Klaim Barang'
+            : activeTab === 'konfirmasi'
+            ? 'Konfirmasi Barang'
+            : 'Daftar Laporan Barang Hilang'
+        }
+        description={
+          activeTab === 'klaim'
+            ? 'Cocokkan ciri rahasia dari pemohon sebelum menyetujui serah terima barang temuan.'
+            : activeTab === 'konfirmasi'
+            ? 'Daftar barang temuan yang dilaporkan karyawan dan menunggu verifikasi fisik di pos/penyimpanan.'
+            : 'Pantau dan kelola laporan kehilangan yang diajukan karyawan.'
+        }
+        actions={
           <Button
             variant="outline"
-            size="sm"
             onClick={handleRefresh}
             loading={isClaimsFetching || isReportsFetching}
-            className="min-h-[44px]"
           >
-            <RefreshCw className={`w-4 h-4 ${isClaimsFetching || isReportsLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className="size-4" aria-hidden="true" />
             <span>Muat Ulang</span>
           </Button>
-        </div>
-      </header>
+        }
+      />
 
       {/* Primary Tab Switcher */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-3 overflow-x-auto">
-        <button
-          type="button"
-          onClick={() => setActiveTab('klaim')}
-          className={`shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-            activeTab === 'klaim'
-              ? 'bg-[#123356] text-white shadow-sm'
-              : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
-          }`}
-        >
-          <span>Klaim Barang Temuan</span>
-          <span
-            className={`min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full text-[11px] font-extrabold tabular-nums ${
-              activeTab === 'klaim'
-                ? 'bg-amber-500 text-white'
-                : 'bg-slate-100 text-slate-700'
-            }`}
-          >
-            {tabCounts?.claims ?? stats?.pending ?? 0}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('laporan-hilang')}
-          className={`shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-            activeTab === 'laporan-hilang'
-              ? 'bg-[#123356] text-white shadow-sm'
-              : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
-          }`}
-        >
-          <span>Laporan Barang Hilang</span>
-          <span
-            className={`min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full text-[11px] font-extrabold tabular-nums ${
-              activeTab === 'laporan-hilang'
-                ? 'bg-amber-500 text-white'
-                : 'bg-slate-100 text-slate-700'
-            }`}
-          >
-            {tabCounts?.lostReports ?? 0}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('konfirmasi')}
-          className={`shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-            activeTab === 'konfirmasi'
-              ? 'bg-[#123356] text-white shadow-sm'
-              : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
-          }`}
-        >
-          <span>Konfirmasi Barang</span>
-          <span
-            className={`min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full text-[11px] font-extrabold tabular-nums ${
-              activeTab === 'konfirmasi'
-                ? 'bg-amber-500 text-white'
-                : 'bg-slate-100 text-slate-700'
-            }`}
-          >
-            {tabCounts?.confirmations ?? 0}
-          </span>
-        </button>
-      </div>
+      <nav aria-label="Bagian ruang kerja admin" className="-mx-4 overflow-x-auto px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0">
+        <div ref={tabRailRef} className="flex min-w-max items-center gap-1 border-b border-line">
+          {ADMIN_TABS.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                aria-pressed={isActive}
+                className={[
+                  '-mb-px inline-flex min-h-12 items-center gap-2 border-b-2 px-3 text-[13px] transition-colors sm:px-4 sm:text-sm',
+                  isActive
+                    ? 'border-brand font-semibold text-ink'
+                    : 'border-transparent font-medium text-muted hover:text-ink',
+                ].join(' ')}
+              >
+                <span>{tab.label}</span>
+                <span
+                  className={[
+                    'min-w-5 rounded-pill px-1.5 py-0.5 text-[11px] font-semibold tabular-nums',
+                    isActive
+                      ? 'bg-brand text-inverse'
+                      : 'border border-line bg-surface-muted text-body',
+                  ].join(' ')}
+                >
+                  {tabCount[tab.id]}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
 
       {activeTab === 'konfirmasi' && (
-        <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-bold text-[#123356]">Konfirmasi Penyerahan Barang</h2>
-              <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                Daftar barang temuan yang dilaporkan karyawan dan menunggu verifikasi fisik di pos/penyimpanan.
-              </p>
-            </div>
-            <button
+        <div className="space-y-5">
+          <div className="flex justify-end">
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={() => refetchLostReports()}
-              className="self-start sm:self-auto flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
+              className="w-full sm:w-auto"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isReportsFetching ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`size-4 ${isReportsFetching ? 'animate-spin' : ''}`} aria-hidden="true" />
               <span>Segarkan</span>
-            </button>
+            </Button>
           </div>
 
           {isReportsLoading ? (
-            <div className="apple-card p-12 text-center text-slate-500 bg-white border border-slate-200/90 rounded-2xl">
-              <RefreshCw className="w-8 h-8 animate-spin mx-auto text-sky-600 mb-3" />
-              <p className="text-sm font-medium">Sedang memuat data barang temuan...</p>
+            <div className="rounded-card border border-line bg-surface px-6 py-12 text-center">
+              <RefreshCw className="mx-auto mb-3 size-6 animate-spin text-muted" aria-hidden="true" />
+              <p className="text-sm font-medium text-body">Sedang memuat data barang temuan...</p>
             </div>
           ) : pendingHandoverReports.length === 0 ? (
-            <div className="apple-card p-12 text-center text-slate-500 bg-white border border-slate-200/90 rounded-2xl">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-3">
-                <PackageCheck className="w-6 h-6" />
-              </div>
-              <p className="text-base font-semibold text-slate-800">Tidak ada barang yang menunggu penyerahan</p>
-              <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                Semua barang temuan yang dilaporkan telah dikonfirmasi dan diamankan di pos/penyimpanan.
-              </p>
-            </div>
+            <EmptyState
+              icon={<PackageCheck className="size-6" aria-hidden="true" />}
+              title="Tidak ada barang yang menunggu penyerahan"
+              description="Semua barang temuan yang dilaporkan telah dikonfirmasi dan diamankan di pos/penyimpanan."
+            />
           ) : (
-            <div className="grid gap-4">
+            <div className="grid gap-3">
               {pendingHandoverReports.map((report) => (
-                <article
-                  key={report.id}
-                  className="apple-card p-5 bg-white border border-slate-200/90 rounded-2xl shadow-sm hover:shadow-md transition-shadow"
-                >
-                  <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+                <article key={report.id} className="rounded-card border border-line bg-surface p-5">
+                  <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
                     {/* Image & Main Info */}
-                    <div className="flex items-start gap-4 flex-1">
+                    <div className="flex flex-1 items-start gap-4">
                       {report.image_url || (report.image_urls?.length ?? 0) > 0 ? (
-                        <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-slate-100 shrink-0 border border-slate-200">
+                        <div className="relative size-20 shrink-0 overflow-hidden rounded-surface border border-line bg-surface-muted sm:size-24">
                           <Image
                             src={report.image_url || report.image_urls?.[0] || ''}
                             alt={report.item_title}
                             fill
+                            sizes="96px"
                             className="object-cover"
                           />
                         </div>
                       ) : (
-                        <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-slate-100 shrink-0 border border-slate-200 flex items-center justify-center">
-                          <Clock className="w-6 h-6 text-slate-400" />
+                        <div className="flex size-20 shrink-0 items-center justify-center rounded-surface border border-line bg-surface-muted text-muted sm:size-24">
+                          <Clock className="size-6" aria-hidden="true" />
                         </div>
                       )}
-                      <div className="space-y-1.5 flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-[11px] font-bold uppercase tracking-wider text-sky-700 bg-sky-50 px-2.5 py-0.5 rounded-md border border-sky-200/60">
+
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="rounded-control border border-line bg-surface-muted px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-body">
                             {report.category}
                           </span>
-                          <span className="text-xs text-slate-400 font-mono">
-                            {report.report_code}
-                          </span>
+                          <span className="font-mono text-xs text-muted">{report.report_code}</span>
                         </div>
-                        <h3 className="font-bold text-base text-[#123356] truncate">
+                        <h3 className="truncate text-balance text-[15px] font-semibold text-ink sm:text-base">
                           {report.item_title}
                         </h3>
-                        <div className="flex flex-wrap items-center gap-y-1 gap-x-3 text-xs text-slate-500">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
                           <span className="flex items-center gap-1">
-                            <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                            <MapPin className="size-3.5" aria-hidden="true" />
                             {report.location}
                           </span>
                           <span className="flex items-center gap-1">
-                            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                            <Calendar className="size-3.5" aria-hidden="true" />
                             {new Date(report.incident_at).toLocaleDateString('id-ID', {
                               day: 'numeric',
                               month: 'short',
@@ -581,33 +555,26 @@ export default function AdminPage() {
                           </span>
                         </div>
                         {report.public_description && (
-                          <p className="text-xs text-slate-600 line-clamp-2 mt-1">
+                          <p className="line-clamp-2 text-pretty text-[13px] leading-5 text-body">
                             {report.public_description}
                           </p>
                         )}
                       </div>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full lg:w-auto shrink-0 pt-4 lg:pt-0 border-t lg:border-t-0 border-slate-100">
-                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                    <div className="flex w-full shrink-0 flex-col gap-2.5 border-t border-line pt-4 sm:flex-row sm:items-center lg:w-auto lg:border-t-0 lg:pt-0">
+                      <span className="inline-flex w-fit items-center gap-1.5 rounded-pill border border-warning/20 bg-warning-soft px-2.5 py-1 text-[11px] font-semibold text-warning">
+                        <span className="size-1.5 rounded-full bg-warning" aria-hidden="true" />
                         Menunggu Penyerahan
                       </span>
-                      <button
+                      <Button
                         type="button"
                         onClick={() => handleConfirmItemHandover(report)}
-                        disabled={confirmingReportId === report.id}
-                        className="btn-primary text-xs py-2 px-4 rounded-xl flex items-center justify-center gap-2 font-semibold transition-all disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed w-full sm:w-auto"
+                        loading={confirmingReportId === report.id}
+                        className="w-full sm:w-auto"
                       >
-                        {confirmingReportId === report.id ? (
-                          <>
-                            <span className="w-3.5 h-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                            <span>Memproses...</span>
-                          </>
-                        ) : (
-                          'Tandai Diterima di Pos'
-                        )}
-                      </button>
+                        {confirmingReportId === report.id ? 'Memproses...' : 'Tandai Diterima di Pos'}
+                      </Button>
                     </div>
                   </div>
                 </article>
@@ -712,9 +679,9 @@ export default function AdminPage() {
         description={`Anda akan menyetujui ${selectedIds.length} klaim sekaligus.`}
         size="md"
       >
-        <div className="space-y-4">
-          <div>
-            <label htmlFor="bulk-pickup" className="text-xs font-bold text-slate-700 block mb-1">
+        <div className="space-y-5">
+          <div className="space-y-2">
+            <label htmlFor="bulk-pickup" className="block text-[13px] font-semibold text-ink">
               Lokasi Pengambilan Barang untuk Klaim Terpilih
             </label>
             <input
@@ -723,19 +690,21 @@ export default function AdminPage() {
               value={bulkPickupLocation}
               onChange={(e) => setBulkPickupLocation(e.target.value)}
               placeholder="Contoh: Resepsionis / Lobi Utama VINIX7"
-              className="form-input w-full text-sm"
+              className="form-input w-full"
             />
-            <div className="flex flex-wrap gap-1.5 mt-2">
+            <div className="flex flex-wrap gap-1.5 pt-1">
               {QUICK_LOCATIONS.map((loc) => (
                 <button
                   key={loc}
                   type="button"
                   onClick={() => setBulkPickupLocation(loc)}
-                  className={`text-[11px] px-2.5 py-1 rounded-md border transition-colors ${
+                  aria-pressed={bulkPickupLocation === loc}
+                  className={[
+                    'min-h-9 rounded-control border px-2.5 text-[11px] font-medium transition-colors',
                     bulkPickupLocation === loc
-                      ? 'bg-[#123356] text-white border-[#123356]'
-                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                  }`}
+                      ? 'border-brand bg-brand text-inverse'
+                      : 'border-line bg-surface text-body hover:border-line-strong hover:bg-surface-muted',
+                  ].join(' ')}
                 >
                   {loc}
                 </button>
@@ -743,11 +712,12 @@ export default function AdminPage() {
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+          <div className="flex flex-col-reverse gap-2.5 border-t border-line pt-4 sm:flex-row sm:justify-end">
             <Button
               variant="secondary"
               onClick={() => setIsBulkApproveOpen(false)}
               disabled={bulkUpdateMutation.isPending}
+              className="w-full sm:w-auto"
             >
               Batal
             </Button>
@@ -755,7 +725,7 @@ export default function AdminPage() {
               variant="primary"
               onClick={handleBulkApprove}
               loading={bulkUpdateMutation.isPending}
-              className="bg-emerald-700 hover:bg-emerald-800"
+              className="w-full sm:w-auto"
             >
               Setujui {selectedIds.length} Klaim
             </Button>

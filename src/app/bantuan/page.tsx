@@ -3,6 +3,26 @@
 import { useState } from 'react';
 import { ChevronDown, ShieldCheck } from 'lucide-react';
 import { DEFAULT_PICKUP_LOCATION, OFFICE_ADDRESS, OFFICE_NAME } from '@/lib/locations';
+import { PageHeader } from '@/components/ui/PageHeader';
+
+const GUIDE_STEPS = [
+  {
+    title: 'Cari Barang',
+    description: 'Gunakan kata kunci dan filter lokasi untuk mengecek barang temuan terbaru.',
+  },
+  {
+    title: 'Lapor Barang',
+    description: 'Isi formulir barang hilang atau temuan beserta ciri umum dan lokasi kejadian.',
+  },
+  {
+    title: 'Klaim Rahasia',
+    description: 'Jawab pertanyaan ciri privat untuk membuktikan kepemilikan Anda kepada petugas.',
+  },
+  {
+    title: 'Ambil Barang',
+    description: 'Datang ke lokasi pengambilan yang tertera pada tiket dengan membawa identitas setelah klaim disetujui.',
+  },
+];
 
 export default function HelpPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
@@ -27,63 +47,33 @@ export default function HelpPage() {
   ];
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
-      
-      {/* Header */}
-      <div className="text-center space-y-2">
-        <span className="text-xs font-bold text-sky-700 uppercase tracking-widest block">
-          Pusat Bantuan
-        </span>
-        <h1 className="text-3xl font-extrabold text-[#123356]">
-          Bagaimana kami bisa membantumu?
-        </h1>
-        <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto">
-          Panduan langkah, jawaban pertanyaan umum, dan informasi penanganan Lost &amp; Found di {OFFICE_NAME}.
-        </p>
-      </div>
+    <div className="mx-auto max-w-4xl space-y-10 px-4 py-10 sm:px-6 lg:px-8">
+      <PageHeader
+        eyebrow="Pusat Bantuan"
+        title="Bagaimana kami bisa membantumu?"
+        description={`Panduan langkah, jawaban pertanyaan umum, dan informasi penanganan Lost & Found di ${OFFICE_NAME}.`}
+      />
 
-      {/* 4 Panduan Steps (Apple Card) */}
-      <div className="apple-card p-6 sm:p-8 bg-white space-y-6">
-        <h2 className="text-base font-bold text-[#123356]">Panduan Alur Layanan</h2>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-1.5">
-            <span className="w-6 h-6 rounded-full bg-[#123356] text-white flex items-center justify-center font-bold text-xs">1</span>
-            <h3 className="font-bold text-xs text-slate-900">Cari Barang</h3>
-            <p className="text-[11px] text-slate-500 leading-relaxed">
-              Gunakan kata kunci dan filter lokasi untuk mengecek barang temuan terbaru.
-            </p>
-          </div>
+      {/* 4 Panduan Steps */}
+      <section className="space-y-6 rounded-card border border-line bg-surface p-6 sm:p-8">
+        <h2 className="text-[17px] font-semibold text-ink">Panduan Alur Layanan</h2>
 
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-1.5">
-            <span className="w-6 h-6 rounded-full bg-[#123356] text-white flex items-center justify-center font-bold text-xs">2</span>
-            <h3 className="font-bold text-xs text-slate-900">Lapor Barang</h3>
-            <p className="text-[11px] text-slate-500 leading-relaxed">
-              Isi formulir barang hilang atau temuan beserta ciri umum dan lokasi kejadian.
-            </p>
-          </div>
-
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-1.5">
-            <span className="w-6 h-6 rounded-full bg-[#123356] text-white flex items-center justify-center font-bold text-xs">3</span>
-            <h3 className="font-bold text-xs text-slate-900">Klaim Rahasia</h3>
-            <p className="text-[11px] text-slate-500 leading-relaxed">
-              Jawab pertanyaan ciri privat untuk membuktikan kepemilikan Anda kepada petugas.
-            </p>
-          </div>
-
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-1.5">
-            <span className="w-6 h-6 rounded-full bg-[#123356] text-white flex items-center justify-center font-bold text-xs">4</span>
-            <h3 className="font-bold text-xs text-slate-900">Ambil Barang</h3>
-            <p className="text-[11px] text-slate-500 leading-relaxed">
-              Datang ke lokasi pengambilan yang tertera pada tiket dengan membawa identitas setelah klaim disetujui.
-            </p>
-          </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {GUIDE_STEPS.map((step, index) => (
+            <div key={step.title} className="space-y-1.5 rounded-surface border border-line bg-surface-muted p-4">
+              <span className="flex size-6 items-center justify-center rounded-full bg-brand text-xs font-semibold text-inverse">
+                {index + 1}
+              </span>
+              <h3 className="text-[13px] font-semibold text-ink">{step.title}</h3>
+              <p className="text-pretty text-xs leading-5 text-body">{step.description}</p>
+            </div>
+          ))}
         </div>
-      </div>
+      </section>
 
       {/* Accordion FAQ */}
-      <div id="faq" className="apple-card p-6 sm:p-8 bg-white space-y-4">
-        <h2 className="text-base font-bold text-[#123356] pb-2 border-b border-slate-100">
+      <section id="faq" className="space-y-4 rounded-card border border-line bg-surface p-6 sm:p-8">
+        <h2 className="border-b border-line pb-3 text-[17px] font-semibold text-ink">
           Pertanyaan yang Sering Diajukan (FAQ)
         </h2>
 
@@ -93,17 +83,26 @@ export default function HelpPage() {
             return (
               <div
                 key={idx}
-                className="border border-slate-200 rounded-xl overflow-hidden transition-all"
+                className="overflow-hidden rounded-surface border border-line"
               >
                 <button
+                  type="button"
                   onClick={() => setOpenFaq(isOpen ? null : idx)}
-                  className="w-full p-4 text-left font-bold text-xs sm:text-sm text-[#123356] flex items-center justify-between gap-4 hover:bg-slate-50 transition-colors"
+                  aria-expanded={isOpen}
+                  aria-controls={`faq-panel-${idx}`}
+                  className="flex min-h-12 w-full items-center justify-between gap-4 px-4 py-3 text-left text-[13px] font-semibold text-ink transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 sm:text-sm"
                 >
-                  <span>{faq.q}</span>
-                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                  <span className="text-pretty">{faq.q}</span>
+                  <ChevronDown
+                    className={`size-4 shrink-0 text-muted transition-transform duration-150 ${isOpen ? 'rotate-180' : ''}`}
+                    aria-hidden="true"
+                  />
                 </button>
                 {isOpen && (
-                  <div className="px-4 pb-4 text-xs text-slate-600 leading-relaxed border-t border-slate-100 pt-3 bg-slate-50/50">
+                  <div
+                    id={`faq-panel-${idx}`}
+                    className="border-t border-line bg-surface-muted px-4 py-3 text-pretty text-[13px] leading-5 text-body"
+                  >
                     {faq.a}
                   </div>
                 )}
@@ -111,19 +110,18 @@ export default function HelpPage() {
             );
           })}
         </div>
-      </div>
+      </section>
 
       {/* Privacy Notice Card */}
-      <div id="privasi" className="apple-card p-6 bg-sky-50/60 border border-sky-100 flex items-start gap-4">
-        <ShieldCheck className="w-6 h-6 text-sky-700 shrink-0 mt-0.5" />
+      <section id="privasi" className="flex items-start gap-4 rounded-card border border-info/20 bg-info-soft p-5 sm:p-6">
+        <ShieldCheck className="mt-0.5 size-5 shrink-0 text-info" aria-hidden="true" />
         <div className="space-y-1">
-          <h3 className="text-sm font-bold text-sky-900">Kebijakan Privasi &amp; Keamanan</h3>
-          <p className="text-xs text-sky-800 leading-relaxed">
+          <h3 className="text-sm font-semibold text-ink">Kebijakan Privasi &amp; Keamanan</h3>
+          <p className="text-pretty text-[13px] leading-5 text-body">
             Sistem tidak mempublikasikan data identitas pribadi, foto kartu, atau nomor seri barang ke publik. Verifikasi ciri khusus barang dilakukan secara terbatas antara pelapor/pemohon dan petugas berwenang.
           </p>
         </div>
-      </div>
-
+      </section>
     </div>
   );
 }

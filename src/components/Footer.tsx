@@ -1,4 +1,4 @@
- 'use client';
+'use client';
 
 import Link from 'next/link';
 import Image from 'next/image';
@@ -15,90 +15,112 @@ export default function Footer() {
   }, []);
 
   return (
-    <footer className="site-footer py-14 px-4 sm:px-6 lg:px-8 mt-auto" style={{ paddingBottom: 'calc(3.5rem + env(safe-area-inset-bottom))' }}>
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
-        
-        {/* Col 1 */}
+    <footer
+      className="site-footer mt-auto px-4 py-12 sm:px-6 lg:px-8"
+      style={{ paddingBottom: 'calc(3rem + env(safe-area-inset-bottom))' }}
+    >
+      <div className="mx-auto grid max-w-7xl gap-10 md:grid-cols-2 lg:grid-cols-[1.4fr_0.9fr_1.1fr] lg:gap-14">
+        {/* Brand */}
         <div className="space-y-4">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 overflow-hidden bg-white/10 p-0.5">
-              <Image
-                src="/logo.svg"
-                alt="Vinix Lost & Found Logo"
-                width={36}
-                height={36}
-                className="w-full h-full object-contain"
-              />
-            </div>
-            <span className="font-bold text-white text-lg">Vinix L&amp;F</span>
+          <div className="inline-flex rounded-surface bg-white px-3 py-2">
+            <Image
+              src="/logo.svg"
+              alt="Vinix Lost & Found Logo"
+              width={426}
+              height={92}
+              className="h-7 w-auto"
+            />
           </div>
-          <p className="text-sm text-slate-400 leading-relaxed">
+          <p className="max-w-sm text-pretty text-sm leading-6 text-line-strong">
             Sistem internal Lost & Found untuk karyawan PT. Vinix Seven Aurum agar barang hilang dan temuan tertangani dengan aman dan transparan.
           </p>
-          <div className="pt-2 text-xs text-slate-500">
+          <p className="text-xs leading-5 text-line-strong/75">
             © 2026 PT. Vinix Seven Aurum. All rights reserved.
-          </div>
+          </p>
         </div>
 
-        {/* Col 2 */}
-        <div className="space-y-3">
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider">Bantuan</h3>
-          <ul className="space-y-2 text-sm text-slate-400">
+        {/* Bantuan */}
+        <div>
+          <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-white">Bantuan</h3>
+          <ul className="mt-3 text-sm text-line-strong">
             <li>
-              <Link href="/bantuan" className="inline-flex min-h-11 items-center hover:text-white transition-colors">
+              <Link
+                href="/bantuan"
+                className="inline-flex min-h-11 items-center transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-highlight/60"
+              >
                 Panduan klaim barang
               </Link>
             </li>
             <li>
-              <Link href="/bantuan#faq" className="inline-flex min-h-11 items-center hover:text-white transition-colors">
+              <Link
+                href="/bantuan#faq"
+                className="inline-flex min-h-11 items-center transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-highlight/60"
+              >
                 FAQ layanan Lost &amp; Found
               </Link>
             </li>
             <li>
-              <Link href="/bantuan#privasi" className="inline-flex min-h-11 items-center hover:text-white transition-colors">
+              <Link
+                href="/bantuan#privasi"
+                className="inline-flex min-h-11 items-center transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-highlight/60"
+              >
                 Kebijakan privasi data karyawan
               </Link>
             </li>
-            {isAuthenticated && <li>
-              <Link href="/lacak" className="inline-flex min-h-11 items-center hover:text-white transition-colors">
-                Lacak status laporan
-              </Link>
-            </li>}
+            {isAuthenticated && (
+              <li>
+                <Link
+                  href="/lacak"
+                  className="inline-flex min-h-11 items-center transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-highlight/60"
+                >
+                  Lacak status laporan
+                </Link>
+              </li>
+            )}
           </ul>
         </div>
 
-        {/* Col 3 */}
-        <div className="space-y-3">
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider">Layanan Internal</h3>
-          <div className="space-y-2.5 text-sm text-slate-400">
-            <p className="flex items-start gap-2">
-              <Clock className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
-              <span>Waktu penanganan mengikuti jam operasional dan ketersediaan petugas.</span>
-            </p>
-            <p className="flex items-center gap-2">
-              <Mail className="w-4 h-4 text-sky-400 shrink-0" />
-              <a href="mailto:lostfound@vinixsevenaurum.co.id" className="hover:text-white transition-colors">
-                lostfound@vinixsevenaurum.co.id
-              </a>
-            </p>
+        {/* Layanan internal & lokasi */}
+        <div className="space-y-7">
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-white">Layanan Internal</h3>
+            <div className="mt-3 space-y-2.5 text-sm leading-6 text-line-strong">
+              <p className="flex items-start gap-2.5">
+                <Clock className="mt-1 size-4 shrink-0 text-line-strong" aria-hidden="true" />
+                <span>Waktu penanganan mengikuti jam operasional dan ketersediaan petugas.</span>
+              </p>
+              <p className="flex items-center gap-2.5">
+                <Mail className="size-4 shrink-0 text-line-strong" aria-hidden="true" />
+                <a
+                  href="mailto:lostfound@vinixsevenaurum.co.id"
+                  className="break-all transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-highlight/60"
+                >
+                  lostfound@vinixsevenaurum.co.id
+                </a>
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-white">
+              Lokasi Kantor &amp; Pengambilan
+            </h3>
+            <div className="mt-3 space-y-2.5 text-sm leading-6 text-line-strong">
+              <p className="flex items-start gap-2.5">
+                <MapPin className="mt-1 size-4 shrink-0 text-line-strong" aria-hidden="true" />
+                <span>
+                  {OFFICE_NAME}
+                  <br />
+                  {OFFICE_ADDRESS}
+                </span>
+              </p>
+              <p className="flex items-start gap-2.5">
+                <MapPin className="mt-1 size-4 shrink-0 text-line-strong" aria-hidden="true" />
+                <span>Titik pengambilan utama: {DEFAULT_PICKUP_LOCATION} (lihat detail pada tiket/klaim).</span>
+              </p>
+            </div>
           </div>
         </div>
-
-        {/* Col 4 */}
-        <div className="space-y-3">
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider">Lokasi Kantor &amp; Pengambilan</h3>
-          <div className="space-y-2.5 text-sm text-slate-400">
-            <p className="flex items-start gap-2">
-              <MapPin className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
-              <span>{OFFICE_NAME}<br />{OFFICE_ADDRESS}</span>
-            </p>
-            <p className="flex items-start gap-2">
-              <MapPin className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
-              <span>Titik pengambilan utama: {DEFAULT_PICKUP_LOCATION} (lihat detail pada tiket/klaim).</span>
-            </p>
-          </div>
-        </div>
-
       </div>
     </footer>
   );

@@ -2,14 +2,16 @@
 
 import { Suspense, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Lock, Mail, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { signInUser } from '@/lib/supabase/auth';
 import { getAuthRedirectPath } from '@/lib/supabase/redirect';
 import { getAllowedEmailDomains } from '@/lib/supabase/config';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { AuthShell } from '@/components/AuthShell';
+import { TextInput } from '@/components/ui/Field';
+import { Button } from '@/components/ui/Button';
 
 function LoginContent() {
   const router = useRouter();
@@ -65,150 +67,102 @@ function LoginContent() {
   };
 
   return (
-    <div className="min-h-[85vh] flex items-center justify-center px-4 sm:px-6 lg:px-8 py-12">
-      <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-12 rounded-3xl overflow-hidden apple-card bg-white shadow-2xl border border-slate-200">
-
-        {/* Left Side */}
-        <div className="md:col-span-6 relative hidden md:flex flex-col min-h-[480px] bg-slate-900">
-          <Image
-            src="/images/hero-lost-found.png"
-            alt="Area kantor PT. Vinix Seven Aurum"
-            fill
-            sizes="50vw"
-            className="object-cover opacity-70"
-            priority
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/50 to-transparent" />
-
-          <div className="relative z-10 mt-6 ml-6 self-start px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-white text-[11px] font-semibold">
-            Lost & Found internal PT. Vinix Seven Aurum
-          </div>
-
-          <div className="relative z-10 mt-auto mx-6 mb-6 p-5 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/15 text-white space-y-1.5">
-            <h3 className="font-bold text-base leading-snug">
-              Laporkan dan lacak barang hilang/temuan di lingkungan kantor.
-            </h3>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Masuk menggunakan email perusahaan untuk mengakses laporan dan klaim Anda.
-            </p>
-          </div>
-        </div>
-
-        {/* Right Side: Login Form */}
-        <div className="md:col-span-6 p-8 sm:p-10 flex flex-col justify-center gap-6">
-
-          <div className="space-y-1">
-            <h1 className="text-2xl font-extrabold text-[#123356]">
-              Masuk akun karyawan
-            </h1>
-            <p className="text-xs text-slate-500">
-              Gunakan email perusahaan ({domainHint}) untuk masuk.
-            </p>
-          </div>
-
-          <form onSubmit={handleLogin} className="space-y-4" noValidate>
-            {error && (
-              <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
-                {error}
-              </div>
-            )}
-
-            {/* Email field */}
-            <div className="space-y-1.5">
-              <label htmlFor="email" className="text-xs font-bold text-slate-700 block">
-                Email perusahaan
-              </label>
-              <div className="flex items-center gap-2 form-input w-full group focus-within:[box-shadow:0_0_0_3px_rgba(0,113,227,0.2)] focus-within:border-sky-500 transition-all">
-                <Mail className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
-                <input
-                  id="email"
-                  type="email"
-                  required
-                  autoComplete="email"
-                  autoCapitalize="none"
-                  spellCheck={false}
-                  placeholder={allowedDomains[0] ? `nama@${allowedDomains[0]}` : 'nama@perusahaan.com'}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="flex-1 bg-transparent outline-none text-[0.9375rem] text-slate-800 placeholder:text-slate-400 min-w-0"
-                />
-              </div>
-            </div>
-
-            {/* Password field */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label htmlFor="password" className="text-xs font-bold text-slate-700 block">
-                  Password
-                </label>
-                <Link href="/bantuan#faq" className="text-[11px] text-sky-700 hover:underline">
-                  Lupa password?
-                </Link>
-              </div>
-              <div className="flex items-center gap-2 form-input w-full focus-within:[box-shadow:0_0_0_3px_rgba(0,113,227,0.2)] focus-within:border-sky-500 transition-all">
-                <Lock className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  autoComplete="current-password"
-                  placeholder="Masukkan password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="flex-1 bg-transparent outline-none text-[0.9375rem] text-slate-800 placeholder:text-slate-400 min-w-0"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  className="shrink-0 text-slate-400 hover:text-slate-600 transition-colors"
-                  aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
-                >
-                  {showPassword
-                    ? <EyeOff className="w-4 h-4" />
-                    : <Eye className="w-4 h-4" />
-                  }
-                </button>
-              </div>
-            </div>
-
-            {/* Remember me */}
-            <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-slate-600">
-              <input
-                type="checkbox"
-                checked={remember}
-                onChange={(e) => setRemember(e.target.checked)}
-                className="w-4 h-4 rounded accent-sky-600"
-              />
-              <span>Ingat saya di perangkat ini</span>
-            </label>
-
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full btn-primary py-3 justify-center shadow-md disabled:opacity-50"
-            >
-              <span>{isLoading ? 'Memeriksa kredensial...' : 'Masuk ke akun'}</span>
-              <ArrowRight className="w-4 h-4" aria-hidden="true" />
-            </button>
-          </form>
-
-          <p className="text-xs text-center text-slate-500">
-            Belum punya akun?{' '}
-            <Link href={registerUrl} className="font-bold text-sky-700 hover:underline">
-              Buat akun baru
-            </Link>
+    <AuthShell>
+      <div className="space-y-6">
+        <div className="space-y-1.5">
+          <h1 className="text-balance text-2xl font-semibold tracking-tight text-ink">
+            Masuk akun karyawan
+          </h1>
+          <p className="text-pretty text-[13px] leading-5 text-body">
+            Gunakan email perusahaan ({domainHint}) untuk masuk.
           </p>
-
         </div>
+
+        <form onSubmit={handleLogin} className="space-y-5" noValidate>
+          {error && (
+            <div role="alert" className="rounded-control border border-danger/20 bg-danger-soft px-3 py-2.5 text-[13px] leading-5 text-danger">
+              {error}
+            </div>
+          )}
+
+          <TextInput
+            id="email"
+            label="Email perusahaan"
+            type="email"
+            required
+            autoComplete="email"
+            autoCapitalize="none"
+            spellCheck={false}
+            placeholder={allowedDomains[0] ? `nama@${allowedDomains[0]}` : 'nama@perusahaan.com'}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <label htmlFor="password" className="block text-[13px] font-semibold text-ink">
+                Password
+              </label>
+              <Link
+                href="/bantuan#faq"
+                className="text-xs font-medium text-accent transition-colors hover:text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              >
+                Lupa password?
+              </Link>
+            </div>
+            <div className="relative">
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                required
+                autoComplete="current-password"
+                placeholder="Masukkan password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="form-input w-full pr-12"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-0 top-0 flex size-11 items-center justify-center rounded-control text-muted transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+                aria-controls="password"
+              >
+                {showPassword ? <EyeOff className="size-4" aria-hidden="true" /> : <Eye className="size-4" aria-hidden="true" />}
+              </button>
+            </div>
+          </div>
+
+          <label className="flex min-h-11 cursor-pointer select-none items-center gap-2.5 text-[13px] text-body">
+            <input
+              type="checkbox"
+              checked={remember}
+              onChange={(e) => setRemember(e.target.checked)}
+              className="size-4 rounded border-line-strong accent-accent"
+            />
+            <span>Ingat saya di perangkat ini</span>
+          </label>
+
+          <Button type="submit" size="lg" loading={isLoading} disabled={isLoading} className="w-full">
+            <span>{isLoading ? 'Memeriksa kredensial...' : 'Masuk ke akun'}</span>
+            {!isLoading && <ArrowRight className="size-4" aria-hidden="true" />}
+          </Button>
+        </form>
+
+        <p className="border-t border-line pt-5 text-center text-[13px] text-body">
+          Belum punya akun?{' '}
+          <Link href={registerUrl} className="font-semibold text-accent transition-colors hover:text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40">
+            Buat akun baru
+          </Link>
+        </p>
       </div>
-    </div>
+    </AuthShell>
   );
 }
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="px-4 py-12 text-center text-sm text-slate-600">Memuat halaman masuk...</div>}>
+    <Suspense fallback={<div className="px-4 py-12 text-center text-sm text-muted">Memuat halaman masuk...</div>}>
       <LoginContent />
     </Suspense>
   );

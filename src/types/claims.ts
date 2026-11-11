@@ -79,10 +79,10 @@ export const STATUS_LABELS: Record<FilterStatus, string> = {
 };
 
 export const STATUS_COLORS: Record<ClaimStatus, { bg: string; text: string; dot: string; border: string }> = {
-  diajukan: { bg: 'bg-amber-50', text: 'text-amber-800', dot: 'bg-amber-500', border: 'border-amber-200' },
-  ditinjau: { bg: 'bg-sky-50', text: 'text-sky-800', dot: 'bg-sky-500', border: 'border-sky-200' },
-  disetujui: { bg: 'bg-emerald-50', text: 'text-emerald-800', dot: 'bg-emerald-500', border: 'border-emerald-200' },
-  ditolak: { bg: 'bg-rose-50', text: 'text-rose-800', dot: 'bg-rose-500', border: 'border-rose-200' },
+  diajukan: { bg: 'bg-warning-soft', text: 'text-warning', dot: 'bg-warning', border: 'border-warning/20' },
+  ditinjau: { bg: 'bg-info-soft', text: 'text-info', dot: 'bg-info', border: 'border-info/20' },
+  disetujui: { bg: 'bg-success-soft', text: 'text-success', dot: 'bg-success', border: 'border-success/20' },
+  ditolak: { bg: 'bg-danger-soft', text: 'text-danger', dot: 'bg-danger', border: 'border-danger/20' },
 };
 
 export type ReportStatus = 'draf' | 'aktif' | 'ditemukan' | 'klaim' | 'selesai';
@@ -119,9 +119,9 @@ export const REPORT_STATUS_LABELS: Record<FilterReportStatus, string> = {
 };
 
 export const REPORT_STATUS_COLORS: Record<ReportStatus, { bg: string; text: string; dot: string; border: string }> = {
-  draf: { bg: 'bg-slate-50', text: 'text-slate-700', dot: 'bg-slate-400', border: 'border-slate-200' },
-  aktif: { bg: 'bg-amber-50', text: 'text-amber-800', dot: 'bg-amber-500', border: 'border-amber-200' },
-  ditemukan: { bg: 'bg-sky-50', text: 'text-sky-800', dot: 'bg-sky-500', border: 'border-sky-200' },
-  klaim: { bg: 'bg-purple-50', text: 'text-purple-800', dot: 'bg-purple-500', border: 'border-purple-200' },
-  selesai: { bg: 'bg-emerald-50', text: 'text-emerald-800', dot: 'bg-emerald-500', border: 'border-emerald-200' },
+  draf: { bg: 'bg-surface-muted', text: 'text-body', dot: 'bg-muted', border: 'border-line' },
+  aktif: { bg: 'bg-warning-soft', text: 'text-warning', dot: 'bg-warning', border: 'border-warning/20' },
+  ditemukan: { bg: 'bg-info-soft', text: 'text-info', dot: 'bg-info', border: 'border-info/20' },
+  klaim: { bg: 'bg-accent/10', text: 'text-accent', dot: 'bg-accent', border: 'border-accent/20' },
+  selesai: { bg: 'bg-success-soft', text: 'text-success', dot: 'bg-success', border: 'border-success/20' },
 };
