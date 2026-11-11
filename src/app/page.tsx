@@ -98,8 +98,8 @@ export default function HomePage() {
           <div className="lg:col-span-5">
             <div className="relative aspect-4/3 w-full overflow-hidden rounded-card border border-line bg-surface-muted">
               <Image
-                src="/images/hero-lost-found.png"
-                alt="Penyerahan barang temuan di lingkungan kantor PT. Vinix Seven Aurum"
+                src="/images/hero-lost-found.svg"
+                alt="Ransel, kartu identitas, tumbler, dompet, dan kunci yang menunggu diambil di meja lost and found"
                 fill
                 sizes="(max-width: 768px) 100vw, 42vw"
                 className="object-cover"
