@@ -51,5 +51,8 @@ next-env.d.ts
 # local e2e photo fixtures (scripts/e2e-test.mjs reads this folder)
 /foto-data-uji
 
+# E2E test script — testing-only, bukan bagian dari produksi (tidak di-commit)
+/scripts/e2e-test.mjs
+
 # editor/agent backups
 *.bak
