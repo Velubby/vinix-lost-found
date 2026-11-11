@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Search, MapPin, Clock, Filter, RotateCcw, AlertCircle, ChevronDown } from 'lucide-react';
+import { Search, MapPin, Clock, Filter, RotateCcw, AlertCircle, ChevronDown, ArrowRight } from 'lucide-react';
 import { fetchCatalogItems, type CatalogItem } from '@/lib/supabase/items';
 
 function SearchContent() {
@@ -54,6 +54,14 @@ function SearchContent() {
     setTimeRange('all');
   };
 
+  const handleSearchSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const resultsElement = document.getElementById('daftar-hasil');
+    if (resultsElement) {
+      resultsElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   const filteredItems = useMemo(() => {
     const minimumDate =
       timeRange === 'all' || !now
@@ -94,19 +102,19 @@ function SearchContent() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       
-      {/* Top Search Bar (Figma Smart Search Header) */}
-      <div className="apple-card p-4 sm:p-5 bg-white/90 backdrop-blur-md">
+      {/* Top Search Bar */}
+      <form onSubmit={handleSearchSubmit} className="apple-card p-4 sm:p-5 bg-white border border-slate-200/90 shadow-sm">
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
           
           {/* Search Input */}
           <div className="sm:col-span-5 relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Cari dompet, kunci, tas, atau warna..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-white"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-white placeholder-slate-500 text-slate-900"
             />
           </div>
 
@@ -141,8 +149,8 @@ function SearchContent() {
           {/* Search CTA */}
           <div className="sm:col-span-2">
             <button
-              onClick={() => {}}
-              className="w-full py-2.5 px-4 rounded-xl bg-[#123356] hover:bg-[#0c233c] text-white text-sm font-semibold flex items-center justify-center gap-2 transition-transform active:scale-95"
+              type="submit"
+              className="w-full py-2.5 px-4 rounded-xl bg-[#123356] hover:bg-[#0c233c] text-white text-sm font-semibold flex items-center justify-center gap-2 transition-transform active:scale-95 shadow-sm"
             >
               <Search className="w-4 h-4" />
               <span>Cari Barang</span>
@@ -150,7 +158,7 @@ function SearchContent() {
           </div>
 
         </div>
-      </div>
+      </form>
 
       {/* Main Content: Sidebar Filter + Cards Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -232,7 +240,7 @@ function SearchContent() {
         <section className="lg:col-span-9 space-y-6">
           
           {/* Results Summary Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-200 gap-2">
+          <div id="daftar-hasil" className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-200 gap-2 scroll-mt-24">
             <div>
               <h2 className="text-xl font-extrabold text-[#123356]">
                 Barang yang mungkin cocok
@@ -265,9 +273,9 @@ function SearchContent() {
               {filteredItems.map((item, index) => (
                 <article
                   key={item.id}
-                  className="apple-card group flex flex-col overflow-hidden bg-white"
+                  className="apple-card group flex flex-col overflow-hidden bg-white border border-slate-200/90 hover:border-sky-300 transition-all duration-200"
                 >
-                  <div className="relative h-44 w-full bg-slate-100 overflow-hidden">
+                  <Link href={`/barang/${item.id}`} className="relative h-44 w-full bg-slate-100 overflow-hidden block">
                     {item.image ? (
                       <Image
                         src={item.image}
@@ -277,36 +285,43 @@ function SearchContent() {
                         className="object-cover transition-transform duration-300 group-hover:scale-105"
                         priority={index === 0}
                       />
-                    ) : <div className="h-full w-full bg-slate-200" aria-label="Foto belum tersedia" />}
-                    <span className="absolute top-2.5 right-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/95 backdrop-blur-md text-slate-800 shadow-xs uppercase">
+                    ) : (
+                      <div className="h-full w-full bg-slate-100 flex items-center justify-center text-xs text-slate-500" aria-label="Foto belum tersedia">
+                        Foto belum tersedia
+                      </div>
+                    )}
+                    <span className="absolute top-2.5 right-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-white/95 text-slate-700 shadow-xs border border-slate-200/70">
                       {item.categoryTag}
                     </span>
-                  </div>
+                  </Link>
 
                   <div className="p-4 flex flex-col flex-1">
-                    <h3 className="font-bold text-base text-[#123356] group-hover:text-sky-700 transition-colors">
-                      {item.title}
-                    </h3>
+                    <Link href={`/barang/${item.id}`} className="group/title block">
+                      <h3 className="font-bold text-base text-[#123356] group-hover/title:text-sky-700 transition-colors line-clamp-1">
+                        {item.title}
+                      </h3>
+                    </Link>
 
-                    <div className="flex items-center gap-1.5 text-xs text-sky-700 font-semibold mt-1">
-                      <MapPin className="w-3.5 h-3.5 shrink-0" />
+                    <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium mt-1">
+                      <MapPin className="w-3.5 h-3.5 text-sky-700 shrink-0" />
                       <span className="truncate">{item.location}</span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-0.5">
-                      <Clock className="w-3.5 h-3.5 shrink-0" />
+                    <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5">
+                      <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                       <span>{item.date} · {item.time}</span>
                     </div>
 
-                    <p className="text-xs text-slate-500 mt-2.5 line-clamp-2 leading-relaxed flex-1">
+                    <p className="text-xs text-slate-600 mt-2 line-clamp-2 leading-relaxed flex-1">
                       {item.description}
                     </p>
 
-                    <div className="pt-4 mt-auto">
+                    <div className="pt-3.5 mt-auto border-t border-slate-100">
                       <Link
                         href={`/barang/${item.id}`}
-                        className="w-full py-2 px-3 rounded-xl bg-slate-100 hover:bg-[#123356] hover:text-white text-[#123356] text-xs font-semibold text-center block transition-all"
+                        className="text-xs font-semibold text-sky-700 hover:text-sky-900 inline-flex items-center gap-1 group-hover:translate-x-0.5 transition-transform"
                       >
-                        Lihat Detail
+                        <span>Periksa &amp; Ajukan Klaim</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
                       </Link>
                     </div>
                   </div>

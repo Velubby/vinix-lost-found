@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Search, PlusCircle, ArrowRight, ShieldCheck, Clock, MapPin, Sparkles } from 'lucide-react';
+import { Search, PlusCircle, ArrowRight, ShieldCheck, Clock, MapPin } from 'lucide-react';
 import { fetchCatalogItems, type CatalogItem } from '@/lib/supabase/items';
 
 export default function HomePage() {
@@ -38,10 +38,10 @@ export default function HomePage() {
           {/* Left Column: Copy & Search */}
           <div className="lg:col-span-7 space-y-6">
             
-            {/* Pill Badge */}
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-100/80 border border-sky-200 text-sky-900 text-xs font-semibold uppercase tracking-wider">
-              <Sparkles className="w-3.5 h-3.5 text-sky-600" />
-              <span>Layanan Internal Kantor</span>
+            {/* Brand / Scope Identifier */}
+            <div className="flex items-center gap-2 text-xs font-semibold tracking-wide text-sky-800">
+              <ShieldCheck className="w-4 h-4 text-sky-700" />
+              <span>Layanan Internal PT. Vinix Seven Aurum</span>
             </div>
 
             {/* Headline */}
@@ -57,13 +57,13 @@ export default function HomePage() {
             {/* Integrated Search Bar */}
             <form onSubmit={handleSearch} className="max-w-xl">
               <div className="relative flex items-center p-1.5 bg-white rounded-2xl border border-slate-200/90 shadow-md focus-within:ring-3 focus-within:ring-sky-500/20 focus-within:border-sky-500 transition-all">
-                <Search className="w-5 h-5 text-slate-400 ml-3 shrink-0" />
+                <Search className="w-5 h-5 text-slate-500 ml-3 shrink-0" />
                 <input
                   type="text"
                   placeholder="Cari dompet, kunci, botol minum..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full min-w-0 px-3 py-2 text-sm sm:text-base text-slate-800 placeholder-slate-400 bg-transparent focus:outline-none"
+                  className="w-full min-w-0 px-3 py-2 text-sm sm:text-base text-slate-800 placeholder-slate-500 bg-transparent focus:outline-none"
                 />
                 <button
                   type="submit"
@@ -92,17 +92,17 @@ export default function HomePage() {
               </Link>
             </div>
 
-            <p className="text-xs text-slate-400 pt-1">
+            <p className="text-xs text-slate-600 pt-1">
               Tersedia untuk karyawan PT. Vinix Seven Aurum.
             </p>
           </div>
 
-          {/* Right Column: Hero Visual with Apple Frosted Overlays */}
+          {/* Right Column: Hero Visual with Grounded Professional Framing */}
           <div className="lg:col-span-5 relative">
-            <div className="relative rounded-3xl overflow-hidden p-2 bg-gradient-to-b from-white/80 to-white/40 border border-black/5 shadow-2xl backdrop-blur-xl">
+            <div className="relative rounded-2xl overflow-hidden p-2 bg-white border border-slate-200/90 shadow-md">
 
               {/* Main Photo */}
-              <div className="relative aspect-4/3 w-full rounded-2xl overflow-hidden">
+              <div className="relative aspect-4/3 w-full rounded-xl overflow-hidden bg-slate-100">
                 <Image
                   src="/images/hero-lost-found.png"
                   alt="Penyerahan barang temuan di lingkungan kantor PT. Vinix Seven Aurum"
@@ -111,13 +111,12 @@ export default function HomePage() {
                   className="object-cover"
                   priority
                 />
+              </div>
 
-                {/* Top Badge */}
-                <div className="absolute top-3 left-3 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-white/60 shadow-md flex items-center gap-2 text-xs font-semibold text-[#123356]">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span>Layanan Lost &amp; Found internal</span>
-                </div>
-
+              {/* Grounded Caption */}
+              <div className="px-2 pt-2.5 pb-1 flex items-center justify-between text-xs text-slate-600">
+                <span className="font-semibold text-[#123356]">Posko Frontdesk &amp; Keamanan</span>
+                <span>Gedung VINIX7</span>
               </div>
 
             </div>
@@ -155,10 +154,10 @@ export default function HomePage() {
             {recentItems.map((item) => (
             <article
               key={item.id}
-              className="apple-card group flex flex-col overflow-hidden"
+              className="apple-card group flex flex-col overflow-hidden bg-white border border-slate-200/90 hover:border-sky-300 transition-all duration-200"
             >
               {/* Card Image */}
-              <div className="relative h-44 w-full bg-slate-100 overflow-hidden">
+              <Link href={`/barang/${item.id}`} className="relative h-44 w-full bg-slate-100 overflow-hidden block">
                 {item.image ? (
                   <Image
                     src={item.image}
@@ -167,36 +166,43 @@ export default function HomePage() {
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                     className="object-cover transition-transform duration-300 group-hover:scale-105"
                   />
-                ) : <div className="h-full w-full bg-slate-200" aria-label="Foto belum tersedia" />}
-                <span className="absolute top-2.5 right-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/90 backdrop-blur-md text-slate-800 shadow-xs border border-white/60 uppercase">
+                ) : (
+                  <div className="h-full w-full bg-slate-100 flex items-center justify-center text-xs text-slate-500" aria-label="Foto belum tersedia">
+                    Foto belum tersedia
+                  </div>
+                )}
+                <span className="absolute top-2.5 right-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-white/95 text-slate-700 shadow-xs border border-slate-200/70">
                   {item.categoryTag}
                 </span>
-              </div>
+              </Link>
 
               {/* Card Details */}
               <div className="p-4 flex flex-col flex-1">
-                <h3 className="font-bold text-base text-[#123356] group-hover:text-sky-700 transition-colors">
-                  {item.title}
-                </h3>
+                <Link href={`/barang/${item.id}`} className="group/title block">
+                  <h3 className="font-bold text-base text-[#123356] group-hover/title:text-sky-700 transition-colors line-clamp-1">
+                    {item.title}
+                  </h3>
+                </Link>
 
-                <div className="flex items-center gap-1.5 text-xs text-sky-700 font-semibold mt-1">
-                  <MapPin className="w-3.5 h-3.5 shrink-0" />
+                <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium mt-1">
+                  <MapPin className="w-3.5 h-3.5 text-sky-700 shrink-0" />
                   <span className="truncate">{item.location}</span>
                   <span>·</span>
-                  <Clock className="w-3.5 h-3.5 shrink-0" />
+                  <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                   <span>{item.time}</span>
                 </div>
 
-                <p className="text-xs text-slate-500 mt-2.5 line-clamp-2 leading-relaxed flex-1">
+                <p className="text-xs text-slate-600 mt-2 line-clamp-2 leading-relaxed flex-1">
                   {item.description}
                 </p>
 
-                <div className="pt-4 mt-auto">
+                <div className="pt-3.5 mt-auto border-t border-slate-100">
                   <Link
                     href={`/barang/${item.id}`}
-                    className="w-full py-2 px-3 rounded-xl bg-slate-100 hover:bg-[#123356] hover:text-white text-[#123356] text-xs font-semibold text-center block transition-all"
+                    className="text-xs font-semibold text-sky-700 hover:text-sky-900 inline-flex items-center gap-1 group-hover:translate-x-0.5 transition-transform"
                   >
-                    Lihat Detail
+                    <span>Periksa &amp; Ajukan Klaim</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
                 </div>
               </div>

@@ -37,7 +37,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="id">
-      <body className="min-h-screen flex flex-col bg-[#f5f5f7] text-[#1d1d1f] antialiased selection:bg-sky-500 selection:text-white touch-manipulation">
+      <body suppressHydrationWarning className="min-h-screen flex flex-col bg-[#f5f5f7] text-[#1d1d1f] antialiased selection:bg-sky-500 selection:text-white touch-manipulation">
         <QueryProvider>
           <Suspense fallback={<div className="h-16 bg-white/80" />}>
             <Navbar />

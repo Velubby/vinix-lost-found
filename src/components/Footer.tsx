@@ -35,7 +35,7 @@ export default function Footer() {
           <p className="text-sm text-slate-400 leading-relaxed">
             Sistem internal Lost & Found untuk karyawan PT. Vinix Seven Aurum agar barang hilang dan temuan tertangani dengan aman dan transparan.
           </p>
-          <div className="pt-2 text-xs text-slate-500">
+          <div className="pt-2 text-xs text-slate-400">
             © 2026 PT. Vinix Seven Aurum. All rights reserved.
           </div>
         </div>
