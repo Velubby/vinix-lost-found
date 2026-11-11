@@ -43,6 +43,34 @@ function getIncidentDateTimeError(date: string, time: string, now = Date.now()) 
   return '';
 }
 
+/**
+ * Stores an unblurred copy in the private originals bucket so staff can review
+ * the photo. Failures are ignored: the blurred photo is still saved, and the
+ * admin dashboard falls back to it.
+ */
+async function uploadOriginalPhoto(
+  supabase: ReturnType<typeof createClient>,
+  file: File,
+  ownerId: string,
+  photoId: string
+) {
+  try {
+    const original = await optimizeImageFile(file);
+    if (original.type !== 'image/webp') return;
+
+    const { error } = await supabase.storage
+      .from('item-originals')
+      .upload(`${ownerId}/original/${photoId}.webp`, original, {
+        contentType: 'image/webp',
+        upsert: false,
+      });
+
+    if (error) console.warn('Foto asli tidak tersimpan; admin akan melihat versi buram.', error.message);
+  } catch (error) {
+    console.warn('Foto asli tidak tersimpan; admin akan melihat versi buram.', error);
+  }
+}
+
 const MAX_PHOTOS = 3;
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 
@@ -371,14 +399,18 @@ function ReportForm() {
       let imageUrl: string | null = null;
       const imageUrls: string[] = [];
       for (const photo of photos) {
+        const photoId = crypto.randomUUID();
         const uploadFile = await optimizeImageFile(photo.file, { blur: reportType === 'temuan' });
         const extension = uploadFile.type === 'image/webp' ? 'webp' : photo.file.name.split('.').pop()?.toLowerCase() || 'jpg';
-        const imagePath = `${user.id}/${crypto.randomUUID()}.${extension}`;
+        const imagePath = `${user.id}/${photoId}.${extension}`;
         const { error: uploadError } = await supabase.storage.from('item-images').upload(imagePath, uploadFile, { contentType: uploadFile.type, upsert: false });
         if (uploadError) {
           setSubmitError('Foto belum dapat diunggah. Pastikan bucket item-images sudah dibuat.');
           toast.error('Foto belum dapat diunggah. Pastikan bucket item-images sudah dibuat.');
           return;
+        }
+        if (reportType === 'temuan') {
+          await uploadOriginalPhoto(supabase, photo.file, user.id, photoId);
         }
         const publicUrl = supabase.storage.from('item-images').getPublicUrl(imagePath).data.publicUrl;
         imageUrls.push(publicUrl);

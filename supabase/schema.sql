@@ -198,6 +198,23 @@ create policy "Users can delete their item images"
   on storage.objects for delete to authenticated
   using (bucket_id = 'item-images' and owner_id = auth.uid()::text);
 
+-- Unblurred originals for staff review. The bucket is private: nobody reads it
+-- through the API, and the admin dashboard gets short-lived signed URLs from a
+-- server action that runs with the service role after checking the staff role.
+insert into storage.buckets (id, name, public)
+values ('item-originals', 'item-originals', false)
+on conflict (id) do update set public = false;
+
+drop policy if exists "Users can upload original item images" on storage.objects;
+
+create policy "Users can upload original item images"
+  on storage.objects for insert to authenticated
+  with check (
+    bucket_id = 'item-originals'
+    and (storage.foldername(name))[1] = auth.uid()::text
+    and (storage.foldername(name))[2] = 'original'
+  );
+
 create policy "Report and item owners can view claims"
   on public.claims for select using (
     auth.uid() = user_id

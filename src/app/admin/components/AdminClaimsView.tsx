@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import {
   Search,
   X,
@@ -26,6 +25,7 @@ import { Checkbox } from '@/components/ui/Checkbox';
 import { StatusFilter, ActionMenu } from '@/components/ui/DropdownMenu';
 import { ClaimCardSkeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { AdminItemImage } from './AdminItemImage';
 
 interface AdminClaimsViewProps {
   claims: Claim[];
@@ -328,10 +328,9 @@ export function AdminClaimsView({
                     {/* Item Image */}
                     {claim.item?.image_url ? (
                       <div className="relative size-20 shrink-0 overflow-hidden rounded-surface border border-line bg-surface-muted">
-                        <Image
+                        <AdminItemImage
                           src={claim.item.image_url}
                           alt={claim.item.title}
-                          fill
                           sizes="80px"
                           className="object-cover"
                         />

@@ -201,6 +201,22 @@ create policy "Users can create their claims"
     )
   );
 
+-- 7. Private bucket for unblurred photos. Found-item photos are blurred before
+--    upload, so the catalog only ever shows the blurred copy. Staff review the
+--    clear copy through a server action that signs a short-lived URL.
+insert into storage.buckets (id, name, public)
+values ('item-originals', 'item-originals', false)
+on conflict (id) do update set public = false;
+
+drop policy if exists "Users can upload original item images" on storage.objects;
+create policy "Users can upload original item images"
+  on storage.objects for insert to authenticated
+  with check (
+    bucket_id = 'item-originals'
+    and (storage.foldername(name))[1] = auth.uid()::text
+    and (storage.foldername(name))[2] = 'original'
+  );
+
 commit;
 
 -- Optional, after checking for duplicates:

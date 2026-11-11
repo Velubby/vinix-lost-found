@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { createNotification } from '@/lib/supabase/server-notifications';
@@ -816,5 +817,52 @@ export async function updateReportStatusAction(input: {
       if (error.message === 'FORBIDDEN') return { success: false, error: 'Akses ditolak: hanya untuk petugas', code: 'FORBIDDEN' };
     }
     return { success: false, error: 'Terjadi kesalahan server', code: 'SERVER_ERROR' };
+  }
+}
+
+const ORIGINAL_BUCKET = 'item-originals';
+const ORIGINAL_URL_TTL_SECONDS = 60 * 10;
+
+/**
+ * Found-item photos are stored blurred at `{ownerId}/{name}.ext`. The clear
+ * copy sits at `{ownerId}/original/{name}.webp` in the private bucket.
+ */
+function originalPathFromImageUrl(imageUrl: string) {
+  const marker = '/item-images/';
+  const markerIndex = imageUrl.indexOf(marker);
+  if (markerIndex === -1) return null;
+
+  const path = decodeURIComponent(imageUrl.slice(markerIndex + marker.length).split('?')[0]);
+  const [ownerId, fileName, ...rest] = path.split('/');
+  if (!ownerId || !fileName || rest.length > 0) return null;
+  if (ownerId === '.' || ownerId === '..') return null;
+
+  const baseName = fileName.replace(/\.[^.]+$/, '');
+  return baseName ? `${ownerId}/original/${baseName}.webp` : null;
+}
+
+export async function getOriginalImageUrlAction(imageUrl: string): Promise<{ url: string | null }> {
+  try {
+    await requireAdmin();
+
+    const path = originalPathFromImageUrl(imageUrl);
+    if (!path) return { url: null };
+
+    const url = process.env.SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !serviceRoleKey) return { url: null };
+
+    const service = createServiceClient(url, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    const { data, error } = await service.storage
+      .from(ORIGINAL_BUCKET)
+      .createSignedUrl(path, ORIGINAL_URL_TTL_SECONDS);
+
+    if (error || !data?.signedUrl) return { url: null };
+    return { url: data.signedUrl };
+  } catch {
+    return { url: null };
   }
 }

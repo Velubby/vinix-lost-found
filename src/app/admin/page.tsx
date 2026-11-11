@@ -3,7 +3,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { RefreshCw, Clock, PackageCheck, MapPin, Calendar } from 'lucide-react';
-import Image from 'next/image';
 import { toast } from 'sonner';
 
 import { createClient } from '@/lib/supabase/client';
@@ -19,6 +18,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 
 import { AdminStatsOverview } from './components/AdminStatsOverview';
 import { AdminClaimsView } from './components/AdminClaimsView';
+import { AdminItemImage } from './components/AdminItemImage';
 import { AdminReportsView } from './components/AdminReportsView';
 import { ClaimDetailModal } from './components/ClaimDetailModal';
 import { RejectClaimModal } from './components/RejectClaimModal';
@@ -516,10 +516,9 @@ export default function AdminPage() {
                     <div className="flex flex-1 items-start gap-4">
                       {report.image_url || (report.image_urls?.length ?? 0) > 0 ? (
                         <div className="relative size-20 shrink-0 overflow-hidden rounded-surface border border-line bg-surface-muted sm:size-24">
-                          <Image
+                          <AdminItemImage
                             src={report.image_url || report.image_urls?.[0] || ''}
                             alt={report.item_title}
-                            fill
                             sizes="96px"
                             className="object-cover"
                           />

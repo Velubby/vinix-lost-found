@@ -75,7 +75,7 @@ NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS=vinixsevenaurum.co.id
 
 ### 3. Siapkan Supabase
 
-Pada proyek Supabase baru, jalankan [supabase/schema.sql](supabase/schema.sql) melalui SQL Editor. Skrip ini membuat tabel, aturan akses, trigger, serta bucket foto publik `item-images`.
+Pada proyek Supabase baru, jalankan [supabase/schema.sql](supabase/schema.sql) melalui SQL Editor. Skrip ini membuat tabel, aturan akses, trigger, serta bucket foto publik `item-images` dan bucket privat `item-originals` untuk foto asli yang hanya dibaca petugas.
 
 Untuk proyek yang sudah berjalan, jalankan [supabase/hardening.sql](supabase/hardening.sql) setelah `schema.sql`. Patch ini menyelaraskan trigger klaim, aturan baca katalog, dan kebijakan klaim. Aman dijalankan berulang.
 
