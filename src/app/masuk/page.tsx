@@ -119,7 +119,7 @@ function LoginContent() {
                 placeholder="Masukkan password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="form-input w-full pr-12"
+                className="form-input form-input-icon-right w-full"
               />
               <button
                 type="button"

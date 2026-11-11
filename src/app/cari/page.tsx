@@ -134,7 +134,7 @@ function SearchContent() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               aria-label="Cari dompet, kunci, tas, atau warna..."
-              className="form-input w-full pl-10 pr-4 text-sm"
+              className="form-input form-input-icon-left w-full text-sm"
             />
           </div>
 

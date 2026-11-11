@@ -403,43 +403,44 @@ function ReportForm() {
         eyebrow="Formulir Terpadu"
         title={reportType === 'hilang' ? 'Laporkan Barang Hilang' : 'Laporkan Barang Temuan'}
         description="Isi detail informasi barang. Petugas akan memverifikasi dan mencocokkan data di sistem."
-        actions={
-          <div
-            role="group"
-            aria-label="Jenis laporan"
-            className="inline-flex w-full rounded-control border border-line bg-surface-muted p-1 sm:w-auto"
-          >
-            <button
-              type="button"
-              onClick={() => handleSwitchType('hilang')}
-              aria-pressed={reportType === 'hilang'}
-              className={[
-                'inline-flex min-h-11 flex-1 items-center justify-center rounded-[6px] px-4 text-[13px] transition-colors sm:flex-none',
-                reportType === 'hilang'
-                  ? 'bg-surface font-semibold text-ink shadow-card'
-                  : 'font-medium text-body hover:text-ink',
-              ].join(' ')}
-            >
-              Barang Hilang
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSwitchType('temuan')}
-              aria-pressed={reportType === 'temuan'}
-              className={[
-                'inline-flex min-h-11 flex-1 items-center justify-center rounded-[6px] px-4 text-[13px] transition-colors sm:flex-none',
-                reportType === 'temuan'
-                  ? 'bg-surface font-semibold text-ink shadow-card'
-                  : 'font-medium text-body hover:text-ink',
-              ].join(' ')}
-            >
-              Barang Ditemukan
-            </button>
-          </div>
-        }
       />
 
-      <FormStepper currentStep={currentStep} />
+      <div className="space-y-6">
+        <div
+          role="group"
+          aria-label="Jenis laporan"
+          className="inline-flex w-full rounded-control border border-line bg-surface-muted p-1 sm:w-auto"
+        >
+          <button
+            type="button"
+            onClick={() => handleSwitchType('hilang')}
+            aria-pressed={reportType === 'hilang'}
+            className={[
+              'inline-flex min-h-11 flex-1 items-center justify-center rounded-[6px] px-4 text-[13px] transition-colors sm:flex-none',
+              reportType === 'hilang'
+                ? 'bg-surface font-semibold text-ink shadow-card'
+                : 'font-medium text-body hover:text-ink',
+            ].join(' ')}
+          >
+            Barang Hilang
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSwitchType('temuan')}
+            aria-pressed={reportType === 'temuan'}
+            className={[
+              'inline-flex min-h-11 flex-1 items-center justify-center rounded-[6px] px-4 text-[13px] transition-colors sm:flex-none',
+              reportType === 'temuan'
+                ? 'bg-surface font-semibold text-ink shadow-card'
+                : 'font-medium text-body hover:text-ink',
+            ].join(' ')}
+          >
+            Barang Ditemukan
+          </button>
+        </div>
+
+        <FormStepper currentStep={currentStep} />
+      </div>
 
       <div className="rounded-card border border-line bg-surface p-5 sm:p-8">
         <form onSubmit={handleSubmit} className="space-y-6">

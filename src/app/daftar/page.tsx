@@ -200,7 +200,7 @@ function RegisterContent() {
                     autoComplete="new-password"
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    className="form-input w-full pr-12"
+                    className="form-input form-input-icon-right w-full"
                     placeholder="Minimal 8 karakter"
                   />
                   <button
@@ -228,7 +228,7 @@ function RegisterContent() {
                     autoComplete="new-password"
                     value={confirmPassword}
                     onChange={(event) => setConfirmPassword(event.target.value)}
-                    className="form-input w-full pr-12"
+                    className="form-input form-input-icon-right w-full"
                     placeholder="Ulangi password"
                   />
                   <button

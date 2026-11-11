@@ -245,14 +245,16 @@ select.form-input {
   cursor: pointer;
 }
 
-/* Input variant with a leading icon: icon sits at left-3 (12px), so we need pl 36px */
+/* Input variants with an icon. Utility padding (pl-*, pr-*) loses to the
+   .form-input padding shorthand, so icons use these classes instead.
+   Leading icon sits at left-3.5 (14px) + 16px wide -> 36px clears it. */
 .form-input-icon-left {
   padding-left: 2.25rem;
 }
 
-/* Input variant with a trailing icon (e.g. show/hide password) */
+/* Trailing icon is a 44px tap target flush to the right edge */
 .form-input-icon-right {
-  padding-right: 2.5rem;
+  padding-right: 2.75rem;
 }
 
 .form-input:focus {
