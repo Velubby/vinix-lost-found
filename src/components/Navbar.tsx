@@ -88,7 +88,7 @@ export default function Navbar() {
 
   const navLink = (path: string) =>
     [
-      'relative flex min-h-11 items-center px-1 text-sm transition-colors',
+      'relative flex min-h-11 items-center whitespace-nowrap px-1 text-sm transition-colors',
       'after:absolute after:inset-x-0 after:bottom-1 after:h-0.5 after:rounded-pill after:transition-colors',
       isCurrent(path)
         ? 'font-semibold text-ink after:bg-brand'
@@ -139,7 +139,7 @@ export default function Navbar() {
         {/* Center: Navigation Links */}
         {!isAuthPage && authReady && (
           <>
-            <nav aria-label="Navigasi Utama" className="hidden items-center gap-5 md:flex lg:gap-7">
+            <nav aria-label="Navigasi Utama" className="hidden items-center gap-4 lg:flex lg:gap-5">
               <Link href="/" className={navLink('/')}>
                 Beranda
               </Link>
@@ -173,7 +173,7 @@ export default function Navbar() {
                 role="dialog"
                 aria-modal="true"
                 aria-label="Menu navigasi"
-                className="fixed inset-0 z-[60] flex flex-col bg-surface md:hidden"
+                className="fixed inset-0 z-[60] flex flex-col bg-surface lg:hidden"
               >
                 <div
                   className="flex items-center justify-between border-b border-line px-4 py-2.5"
@@ -365,7 +365,7 @@ export default function Navbar() {
             <button
               type="button"
               onClick={() => setMobileNavOpen((open) => !open)}
-              className="flex size-11 items-center justify-center rounded-control border border-line bg-surface text-body transition-colors hover:border-line-strong hover:bg-surface-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 md:hidden"
+              className="flex size-11 items-center justify-center rounded-control border border-line bg-surface text-body transition-colors hover:border-line-strong hover:bg-surface-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 lg:hidden"
               aria-expanded={mobileNavOpen}
               aria-haspopup="dialog"
               aria-controls="mobile-nav"

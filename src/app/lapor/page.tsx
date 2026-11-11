@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useLayoutEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ShieldAlert, Upload, Camera, CheckCircle2, ArrowRight, ArrowLeft, Copy, CheckCheck, X, Check } from 'lucide-react';
+import { ShieldAlert, Upload, Camera, CheckCircle2, ArrowRight, ArrowLeft, Copy, CheckCheck, X, Check, Info } from 'lucide-react';
 import { OFFICE_LOCATIONS } from '@/lib/locations';
 import {
   Dialog,
@@ -121,11 +121,8 @@ function ReportForm() {
 
   const [selectedType, setSelectedType] = useState<'hilang' | 'temuan'>('hilang');
   const reportType = queryType || selectedType;
+  const [typeNotice, setTypeNotice] = useState<'hilang' | 'temuan' | null>(null);
 
-  const handleSwitchType = (type: 'hilang' | 'temuan') => {
-    setSelectedType(type);
-    router.replace(`/lapor?type=${type}`, { scroll: false });
-  };
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -239,6 +236,47 @@ function ReportForm() {
   const clearPhotos = () => {
     photos.forEach((photo) => URL.revokeObjectURL(photo.preview));
     setPhotos([]);
+  };
+
+  // Switching the report type keeps what the user already typed: the fields are
+  // identical for both types, so only show that a switch happened and offer a reset.
+  const handleSwitchType = (type: 'hilang' | 'temuan') => {
+    if (type === reportType) return;
+    const hasInput =
+      currentStep > 1 ||
+      photos.length > 0 ||
+      Boolean(
+        formData.namaBarang.trim() ||
+          formData.lokasi.trim() ||
+          formData.deskripsiPublik.trim() ||
+          formData.ciriRahasia.trim()
+      );
+
+    setSelectedType(type);
+    router.replace(`/lapor?type=${type}`, { scroll: false });
+    setDateTimeError('');
+    setTypeNotice(hasInput ? type : null);
+  };
+
+  const handleResetForm = () => {
+    clearPhotos();
+    setFormData((current) => ({
+      namaBarang: '',
+      kategori: 'Elektronik',
+      lokasi: '',
+      ...getJakartaDateTime(),
+      deskripsiPublik: '',
+      ciriRahasia: '',
+      namaPelapor: current.namaPelapor,
+      email: current.email,
+      telepon: current.telepon,
+      setuju: true,
+    }));
+    setUseCustomLocation(false);
+    setCurrentStep(1);
+    setDateTimeError('');
+    setSubmitError('');
+    setTypeNotice(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -438,6 +476,33 @@ function ReportForm() {
             Barang Ditemukan
           </button>
         </div>
+
+        {typeNotice && (
+          <div
+            role="status"
+            className="flex flex-col gap-3 rounded-surface border border-info/20 bg-info-soft px-4 py-3 text-[13px] leading-5 text-body sm:flex-row sm:items-center sm:justify-between"
+          >
+            <p className="flex items-start gap-2">
+              <Info className="mt-0.5 size-4 shrink-0 text-info" aria-hidden="true" />
+              <span>
+                Jenis laporan diubah ke{' '}
+                <strong className="font-semibold text-ink">
+                  {typeNotice === 'hilang' ? 'Barang Hilang' : 'Barang Temuan'}
+                </strong>
+                . Isian yang sudah Anda masukkan tetap tersimpan.
+              </span>
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleResetForm}
+              className="w-full shrink-0 sm:w-auto"
+            >
+              Kosongkan isian
+            </Button>
+          </div>
+        )}
 
         <FormStepper currentStep={currentStep} />
       </div>
