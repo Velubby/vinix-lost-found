@@ -18,7 +18,7 @@ const CLAIM_STATUS_LABELS: Record<ClaimRow['status'], string> = {
   disetujui: 'Disetujui',
   ditolak: 'Ditolak',
 };
-const CONTACT_EMAIL = 'mailto:lostfound@vinixsevenaurum.co.id';
+const CONTACT_EMAIL = 'mailto:lostfound@vinix7.id';
 
 function getReportProgress(report: Pick<UserReportRow, 'type' | 'status'>, claim?: ClaimRow | null) {
   const isFoundReport = report.type === 'temuan';
