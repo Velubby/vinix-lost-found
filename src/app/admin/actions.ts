@@ -172,12 +172,13 @@ export async function updateClaimAction(input: UpdateClaimInput): Promise<Action
         desc = 'Petugas membuka kembali tiket klaim ini untuk verifikasi ulang.';
       }
 
-      await supabase.from('report_events').insert({
+      const { error: eventError } = await supabase.from('report_events').insert({
         report_id: claim.report_id,
         title,
         description: desc,
         created_by: user.id,
       });
+      if (eventError) console.error('Insert report event error:', eventError);
     }
 
     revalidatePath('/admin');
@@ -271,7 +272,8 @@ export async function bulkUpdateClaimsAction(input: BulkUpdateInput): Promise<Ac
       }));
 
     if (events.length > 0) {
-      await supabase.from('report_events').insert(events);
+      const { error: eventsError } = await supabase.from('report_events').insert(events);
+      if (eventsError) console.error('Insert report events error:', eventsError);
     }
 
     // Kirim notifikasi per klaim (link spesifik, sama seperti single update)
@@ -353,15 +355,13 @@ export async function markClaimHandedOverAction(input: { claimId: string }): Pro
 
     const handedOverAt = claim.pickup_at ?? new Date().toISOString();
 
-    if (!claim.pickup_at) {
-      const { error: updateClaimError } = await supabase
-        .from('claims')
-        .update({ pickup_at: handedOverAt, updated_at: handedOverAt })
-        .eq('id', claim.id);
-      if (updateClaimError) {
-        console.error('Mark handover claim error:', updateClaimError);
-        return { success: false, error: 'Gagal mencatat serah terima', code: 'UPDATE_FAILED' };
-      }
+    const { error: updateClaimError } = await supabase
+      .from('claims')
+      .update({ pickup_at: handedOverAt, handed_over_at: handedOverAt, updated_at: handedOverAt })
+      .eq('id', claim.id);
+    if (updateClaimError) {
+      console.error('Mark handover claim error:', updateClaimError);
+      return { success: false, error: 'Gagal mencatat serah terima', code: 'UPDATE_FAILED' };
     }
 
     const { data: item } = await supabase
@@ -370,32 +370,25 @@ export async function markClaimHandedOverAction(input: { claimId: string }): Pro
       .eq('id', claim.item_id)
       .maybeSingle();
 
+    const authoritativeReportId = item?.source_report_id ?? null;
+
     if (item) {
       await supabase.from('items').update({ status: 'Selesai' }).eq('id', item.id);
 
-      if (item.source_report_id) {
+      if (authoritativeReportId) {
         await supabase
           .from('reports')
           .update({ status: 'selesai', updated_at: handedOverAt })
-          .eq('id', item.source_report_id);
+          .eq('id', authoritativeReportId);
 
-        await supabase.from('report_events').insert({
-          report_id: item.source_report_id,
+        const { error: handoverEventError } = await supabase.from('report_events').insert({
+          report_id: authoritativeReportId,
           title: 'Barang telah diserahkan kepada pemilik',
           description: `Serah terima tiket ${claim.ticket_code} selesai. Lokasi: ${claim.pickup_location ?? '-'}.`,
           created_by: user.id,
         });
+        if (handoverEventError) console.error('Insert handover report event error:', handoverEventError);
       }
-    }
-
-    if (claim.report_id && claim.report_id !== item?.source_report_id) {
-      await supabase.from('report_events').insert({
-        report_id: claim.report_id,
-        title: 'Barang telah diserahkan kepada pemilik',
-        description: `Serah terima tiket ${claim.ticket_code} selesai. Lokasi: ${claim.pickup_location ?? '-'}.`,
-        created_by: user.id,
-      });
-      await supabase.from('reports').update({ status: 'selesai' }).eq('id', claim.report_id);
     }
 
     try {
@@ -795,12 +788,13 @@ export async function updateReportStatusAction(input: {
       eventDescription = parsed.note || 'Laporan aktif dalam proses pemantauan dan pencarian oleh petugas.';
     }
 
-    await supabase.from('report_events').insert({
+    const { error: reportEventError } = await supabase.from('report_events').insert({
       report_id: parsed.reportId,
       title: eventTitle,
       description: eventDescription,
       created_by: user.id,
     });
+    if (reportEventError) console.error('Insert report event error:', reportEventError);
 
     revalidatePath('/admin');
     revalidatePath('/lacak');

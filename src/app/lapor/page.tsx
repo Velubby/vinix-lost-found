@@ -43,32 +43,17 @@ function getIncidentDateTimeError(date: string, time: string, now = Date.now()) 
   return '';
 }
 
-/**
- * Stores an unblurred copy in the private originals bucket so staff can review
- * the photo. Failures are ignored: the blurred photo is still saved, and the
- * admin dashboard falls back to it.
- */
-async function uploadOriginalPhoto(
-  supabase: ReturnType<typeof createClient>,
-  file: File,
-  ownerId: string,
-  photoId: string
-) {
-  try {
-    const original = await optimizeImageFile(file);
-    if (original.type !== 'image/webp') return;
+async function uploadFoundPhotoViaServer(file: File, photoId: string): Promise<string> {
+  const form = new FormData();
+  form.append('file', file);
+  form.append('photoId', photoId);
 
-    const { error } = await supabase.storage
-      .from('item-originals')
-      .upload(`${ownerId}/original/${photoId}.webp`, original, {
-        contentType: 'image/webp',
-        upsert: false,
-      });
-
-    if (error) console.warn('Foto asli tidak tersimpan; admin akan melihat versi buram.', error.message);
-  } catch (error) {
-    console.warn('Foto asli tidak tersimpan; admin akan melihat versi buram.', error);
+  const response = await fetch('/api/reports/found-photo', { method: 'POST', body: form });
+  const payload = (await response.json().catch(() => null)) as { url?: string; error?: string } | null;
+  if (!response.ok || !payload?.url) {
+    throw new Error(payload?.error || 'UPLOAD_FAILED');
   }
+  return payload.url;
 }
 
 const MAX_PHOTOS = 3;
@@ -400,19 +385,21 @@ function ReportForm() {
       const imageUrls: string[] = [];
       for (const photo of photos) {
         const photoId = crypto.randomUUID();
-        const uploadFile = await optimizeImageFile(photo.file, { blur: reportType === 'temuan' });
-        const extension = uploadFile.type === 'image/webp' ? 'webp' : photo.file.name.split('.').pop()?.toLowerCase() || 'jpg';
-        const imagePath = `${user.id}/${photoId}.${extension}`;
-        const { error: uploadError } = await supabase.storage.from('item-images').upload(imagePath, uploadFile, { contentType: uploadFile.type, upsert: false });
-        if (uploadError) {
-          setSubmitError('Foto belum dapat diunggah. Pastikan bucket item-images sudah dibuat.');
-          toast.error('Foto belum dapat diunggah. Pastikan bucket item-images sudah dibuat.');
-          return;
-        }
+        let publicUrl: string;
         if (reportType === 'temuan') {
-          await uploadOriginalPhoto(supabase, photo.file, user.id, photoId);
+          publicUrl = await uploadFoundPhotoViaServer(photo.file, photoId);
+        } else {
+          const uploadFile = await optimizeImageFile(photo.file);
+          const extension = uploadFile.type === 'image/webp' ? 'webp' : photo.file.name.split('.').pop()?.toLowerCase() || 'jpg';
+          const imagePath = `${user.id}/${photoId}.${extension}`;
+          const { error: uploadError } = await supabase.storage
+            .from('item-images')
+            .upload(imagePath, uploadFile, { contentType: uploadFile.type, upsert: false });
+          if (uploadError) {
+            throw new Error('UPLOAD_FAILED');
+          }
+          publicUrl = supabase.storage.from('item-images').getPublicUrl(imagePath).data.publicUrl;
         }
-        const publicUrl = supabase.storage.from('item-images').getPublicUrl(imagePath).data.publicUrl;
         imageUrls.push(publicUrl);
         if (!imageUrl) imageUrl = publicUrl;
       }
@@ -454,9 +441,17 @@ function ReportForm() {
       }));
       clearPhotos();
       setCurrentStep(1);
-    } catch {
-      setSubmitError('Terjadi kesalahan saat menyimpan laporan. Coba lagi nanti.');
-      toast.error('Terjadi kesalahan saat menyimpan laporan. Coba lagi nanti.');
+    } catch (error) {
+      if (error instanceof Error && (error.message === 'UPLOAD_FAILED' || error.message === 'SERVER_MISCONFIGURED')) {
+        setSubmitError('Foto belum dapat diunggah. Coba lagi nanti.');
+        toast.error('Foto belum dapat diunggah. Coba lagi nanti.');
+      } else if (error instanceof Error && (error.message === 'BLUR_UNAVAILABLE' || error.message === 'INVALID_TYPE' || error.message === 'FILE_TOO_LARGE')) {
+        setSubmitError('Foto temuan tidak dapat diproses. Gunakan format gambar yang didukung (PNG/JPG/WEBP).');
+        toast.error('Foto temuan tidak dapat diproses. Gunakan format gambar yang didukung.');
+      } else {
+        setSubmitError('Terjadi kesalahan saat menyimpan laporan. Coba lagi nanti.');
+        toast.error('Terjadi kesalahan saat menyimpan laporan. Coba lagi nanti.');
+      }
     } finally {
       setIsSubmitting(false);
     }

@@ -14,7 +14,8 @@ function loadImage(src: string) {
 
 /**
  * Resizes and re-encodes an image to WebP before it is stored, optionally blurring it first.
- * Returns the original file when the browser cannot encode WebP.
+ * For blurred (found-item) photos, failures throw instead of falling back to the original file
+ * to avoid publishing a clear image.
  */
 export async function optimizeImageFile(file: File, options: { blur?: boolean } = {}) {
   const objectUrl = URL.createObjectURL(file);
@@ -31,17 +32,24 @@ export async function optimizeImageFile(file: File, options: { blur?: boolean } 
     canvas.height = height + padding * 2;
 
     const context = canvas.getContext('2d');
-    if (!context) return file;
+    if (!context) {
+      if (options.blur) throw new Error('BLUR_UNAVAILABLE');
+      return file;
+    }
 
     if (options.blur) context.filter = `blur(${BLUR_RADIUS}px)`;
     context.drawImage(image, padding, padding, width, height);
 
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/webp', WEBP_QUALITY));
-    if (!blob || blob.type !== 'image/webp') return file;
+    if (!blob || blob.type !== 'image/webp') {
+      if (options.blur) throw new Error('BLUR_UNAVAILABLE');
+      return file;
+    }
 
     const name = file.name.replace(/\.[^.]+$/, '') || 'foto';
     return new File([blob], `${name}.webp`, { type: 'image/webp' });
-  } catch {
+  } catch (error) {
+    if (options.blur) throw error instanceof Error ? error : new Error('BLUR_UNAVAILABLE');
     return file;
   } finally {
     URL.revokeObjectURL(objectUrl);

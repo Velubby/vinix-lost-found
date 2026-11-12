@@ -77,9 +77,14 @@ create table if not exists public.claims (
   pickup_location text,
   pickup_at timestamptz,
   approved_at timestamptz,
+  handed_over_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+create unique index if not exists claims_one_active_per_user_item
+  on public.claims (item_id, user_id)
+  where status in ('diajukan', 'ditinjau', 'disetujui');
 
 create table if not exists public.report_events (
   id uuid primary key default gen_random_uuid(),
@@ -102,6 +107,7 @@ alter table public.claims alter column report_id drop not null;
 alter table public.claims add column if not exists pickup_location text;
 alter table public.claims add column if not exists pickup_at timestamptz;
 alter table public.claims add column if not exists approved_at timestamptz;
+alter table public.claims add column if not exists handed_over_at timestamptz;
 alter table public.items add column if not exists source_report_id uuid unique;
 alter table public.items add column if not exists diterima_di_pos boolean default false;
 alter table public.items drop column if exists private_notes;
@@ -148,6 +154,7 @@ drop policy if exists "Report and item owners can view claims" on public.claims;
 drop policy if exists "Staff can view and update claims" on public.claims;
 drop policy if exists "Staff can update claims" on public.claims;
 drop policy if exists "Users can view events for their reports" on public.report_events;
+drop policy if exists "Staff can create report events" on public.report_events;
 
 create policy "Profiles are visible to their owner"
   on public.profiles for select using (auth.uid() = id or public.is_staff());
@@ -173,21 +180,33 @@ create policy "Users can update their reports"
   on public.reports for update using (
     public.is_staff()
     or (auth.uid() = user_id and status = 'draf')
-  ) with check (public.is_staff() or auth.uid() = user_id);
+  ) with check (
+    public.is_staff()
+    or (auth.uid() = user_id and status = 'draf' and diterima_di_pos = false)
+  );
 create policy "Users can delete their draft reports"
   on public.reports for delete using (auth.uid() = user_id and status = 'draf');
 
-insert into storage.buckets (id, name, public)
-values ('item-images', 'item-images', true)
-on conflict (id) do update set public = true;
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'item-images',
+  'item-images',
+  true,
+  5242880,
+  array['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif']
+)
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
 
 drop policy if exists "Public item images are viewable" on storage.objects;
 drop policy if exists "Users can upload item images" on storage.objects;
 drop policy if exists "Users can update their item images" on storage.objects;
 drop policy if exists "Users can delete their item images" on storage.objects;
 
-create policy "Public item images are viewable"
-  on storage.objects for select using (bucket_id = 'item-images');
+-- No select policy for item-images: prevents anonymous/authenticated enumeration via storage.list.
+-- Direct public object URLs remain accessible because the bucket is public.
 create policy "Users can upload item images"
   on storage.objects for insert to authenticated
   with check (bucket_id = 'item-images' and (storage.foldername(name))[1] = auth.uid()::text);
@@ -215,20 +234,10 @@ create policy "Users can upload original item images"
     and (storage.foldername(name))[2] = 'original'
   );
 
-create policy "Report and item owners can view claims"
+create policy "Users and staff can view claims"
   on public.claims for select using (
     auth.uid() = user_id
     or public.is_staff()
-    or exists (
-      select 1 from public.items
-      where items.id = claims.item_id
-        and items.created_by = auth.uid()
-    )
-    or exists (
-      select 1 from public.reports
-      where reports.id = claims.report_id
-        and reports.user_id = auth.uid()
-    )
   );
 create policy "Users can create their claims"
   on public.claims for insert with check (
@@ -262,10 +271,11 @@ begin
   where id = claim_id
     and user_id = auth.uid()
     and status = 'disetujui'
+    and handed_over_at is null
   returning * into updated_claim;
 
   if updated_claim.id is null then
-    raise exception 'Klaim tidak ditemukan atau belum disetujui';
+    raise exception 'Klaim tidak ditemukan, belum disetujui, atau sudah diserahkan';
   end if;
 
   return updated_claim;
@@ -284,6 +294,9 @@ create policy "Users can view events for their reports"
         and reports.user_id = auth.uid()
     )
   );
+create policy "Staff can create report events"
+  on public.report_events for insert to authenticated
+  with check (public.is_staff());
 
 -- Auto-create employee profile on signup
 create or replace function public.handle_new_user()
@@ -408,6 +421,11 @@ create trigger on_claim_submitted
 after insert on public.claims
 for each row execute procedure public.handle_claim_submitted();
 
+drop trigger if exists enforce_claim_report_consistency on public.claims;
+create trigger enforce_claim_report_consistency
+before insert on public.claims
+for each row execute procedure public.enforce_claim_report_consistency();
+
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
@@ -438,6 +456,26 @@ begin
   if new.status = 'disetujui' and new.approved_at is null then
     new.approved_at = now();
   end if;
+  return new;
+end;
+$$;
+
+-- Enforce claim.report_id to match the claimed item's source report.
+create or replace function public.enforce_claim_report_consistency()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  source_report uuid;
+begin
+  select items.source_report_id
+    into source_report
+  from public.items
+  where items.id = new.item_id;
+
+  new.report_id := source_report;
   return new;
 end;
 $$;

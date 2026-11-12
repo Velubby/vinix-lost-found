@@ -110,7 +110,12 @@ export async function submitItemClaim(input: {
     .select('id, ticket_code')
     .single();
 
-  if (error) throw error;
+  if (error) {
+    if ((error as { code?: string }).code === '23505') {
+      throw new Error('DUPLICATE_CLAIM');
+    }
+    throw error;
+  }
   return data;
 }
 
