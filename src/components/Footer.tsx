@@ -92,10 +92,10 @@ export default function Footer() {
               <p className="flex items-center gap-2.5">
                 <Mail className="size-4 shrink-0 text-line-strong" aria-hidden="true" />
                 <a
-                  href="mailto:lostfound@vinixsevenaurum.co.id"
+                  href="mailto:lostfound@vinix7.id"
                   className="break-all transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-highlight/60"
                 >
-                  lostfound@vinixsevenaurum.co.id
+                  lostfound@vinix7.id
                 </a>
               </p>
             </div>

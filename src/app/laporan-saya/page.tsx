@@ -413,7 +413,7 @@ export default function MyReportsPage() {
                       )}
 
                       <a
-                        href="mailto:lostfound@vinixsevenaurum.co.id?subject=Pertanyaan%20Status%20Laporan%20Lost%20%26%20Found"
+                        href="mailto:lostfound@vinix7.id?subject=Pertanyaan%20Status%20Laporan%20Lost%20%26%20Found"
                         className="btn-secondary w-full sm:w-56"
                         title="Hubungi petugas Lost &amp; Found"
                       >
