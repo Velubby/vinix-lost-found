@@ -81,8 +81,6 @@ Untuk proyek yang sudah berjalan, jalankan [supabase/hardening.sql](supabase/har
 
 Jalankan [supabase/auth-domain-guard.sql](supabase/auth-domain-guard.sql) untuk menegakkan pembatasan domain email di sisi server (mencegah pendaftaran langsung lewat Supabase Auth dengan domain di luar daftar). Sesuaikan daftar domain di skrip agar sama dengan `NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS`.
 
-[supabase/catalog-policy.sql](supabase/catalog-policy.sql) hanya diperlukan untuk instalasi lama yang katalognya belum bisa dibaca publik. Instalasi baru tidak memerlukannya.
-
 Gunakan provider Email untuk pendaftaran dan login email/password. Login Google tidak dipakai. Pengaturan **Confirm email** menentukan apakah pengguna harus mengonfirmasi email sebelum masuk.
 
 Untuk membuat akun admin, daftar lewat aplikasi lalu ubah kolom `role` pada baris akun tersebut di tabel `profiles` menjadi `admin` melalui Table Editor Supabase. Akun baru memiliki peran bawaan `karyawan`.
