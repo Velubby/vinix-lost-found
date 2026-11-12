@@ -315,4 +315,60 @@ $$;
 
 grant execute on function public.schedule_claim(uuid, timestamptz) to authenticated;
 
+-- 13. Prevent users from self-promoting profile role.
+drop policy if exists "Users can update their profile" on public.profiles;
+create policy "Users can update their profile"
+  on public.profiles for update
+  using (auth.uid() = id)
+  with check (auth.uid() = id);
+
+create or replace function public.prevent_profile_role_escalation()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.role is distinct from old.role and not public.is_staff() then
+    new.role := old.role;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists prevent_profile_role_escalation on public.profiles;
+create trigger prevent_profile_role_escalation
+before update on public.profiles
+for each row execute procedure public.prevent_profile_role_escalation();
+
+-- 14. Normalize claim inserts (server-enforced initial state and ticket).
+create or replace function public.normalize_claim_insert()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  generated_ticket text;
+begin
+  new.status := 'diajukan';
+  new.approved_at := null;
+  new.pickup_at := null;
+  new.pickup_location := null;
+  new.handed_over_at := null;
+
+  if new.ticket_code is null or btrim(new.ticket_code) = '' then
+    generated_ticket := 'TKT-' || to_char(now() at time zone 'Asia/Jakarta', 'YYMMDD') || '-' || lpad((floor(random() * 9000) + 1000)::text, 4, '0');
+    new.ticket_code := generated_ticket;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists normalize_claim_insert on public.claims;
+create trigger normalize_claim_insert
+before insert on public.claims
+for each row execute procedure public.normalize_claim_insert();
+
 commit;

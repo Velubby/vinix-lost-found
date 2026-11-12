@@ -161,7 +161,28 @@ create policy "Profiles are visible to their owner"
 create policy "Users can create their profile"
   on public.profiles for insert with check (auth.uid() = id);
 create policy "Users can update their profile"
-  on public.profiles for update using (auth.uid() = id);
+  on public.profiles for update
+  using (auth.uid() = id)
+  with check (auth.uid() = id);
+
+create or replace function public.prevent_profile_role_escalation()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.role is distinct from old.role and not public.is_staff() then
+    new.role := old.role;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists prevent_profile_role_escalation on public.profiles;
+create trigger prevent_profile_role_escalation
+before update on public.profiles
+for each row execute procedure public.prevent_profile_role_escalation();
 
 create policy "Anyone can browse found items"
   on public.items for select to anon, authenticated using (
@@ -426,6 +447,11 @@ create trigger enforce_claim_report_consistency
 before insert on public.claims
 for each row execute procedure public.enforce_claim_report_consistency();
 
+drop trigger if exists normalize_claim_insert on public.claims;
+create trigger normalize_claim_insert
+before insert on public.claims
+for each row execute procedure public.normalize_claim_insert();
+
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
@@ -476,6 +502,31 @@ begin
   where items.id = new.item_id;
 
   new.report_id := source_report;
+  return new;
+end;
+$$;
+
+-- Normalize claim inserts: force initial state and server-generated ticket.
+create or replace function public.normalize_claim_insert()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  generated_ticket text;
+begin
+  new.status := 'diajukan';
+  new.approved_at := null;
+  new.pickup_at := null;
+  new.pickup_location := null;
+  new.handed_over_at := null;
+
+  if new.ticket_code is null or btrim(new.ticket_code) = '' then
+    generated_ticket := 'TKT-' || to_char(now() at time zone 'Asia/Jakarta', 'YYMMDD') || '-' || lpad((floor(random() * 9000) + 1000)::text, 4, '0');
+    new.ticket_code := generated_ticket;
+  end if;
+
   return new;
 end;
 $$;
