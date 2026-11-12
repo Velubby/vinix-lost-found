@@ -442,16 +442,6 @@ create trigger on_claim_submitted
 after insert on public.claims
 for each row execute procedure public.handle_claim_submitted();
 
-drop trigger if exists enforce_claim_report_consistency on public.claims;
-create trigger enforce_claim_report_consistency
-before insert on public.claims
-for each row execute procedure public.enforce_claim_report_consistency();
-
-drop trigger if exists normalize_claim_insert on public.claims;
-create trigger normalize_claim_insert
-before insert on public.claims
-for each row execute procedure public.normalize_claim_insert();
-
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
@@ -530,6 +520,16 @@ begin
   return new;
 end;
 $$;
+
+drop trigger if exists enforce_claim_report_consistency on public.claims;
+create trigger enforce_claim_report_consistency
+before insert on public.claims
+for each row execute procedure public.enforce_claim_report_consistency();
+
+drop trigger if exists normalize_claim_insert on public.claims;
+create trigger normalize_claim_insert
+before insert on public.claims
+for each row execute procedure public.normalize_claim_insert();
 
 drop trigger if exists set_claims_approved_at on public.claims;
 create trigger set_claims_approved_at
