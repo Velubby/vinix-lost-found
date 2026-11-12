@@ -172,6 +172,11 @@ security definer
 set search_path = public
 as $$
 begin
+  -- Allow maintenance/bootstrap changes from SQL contexts without an authenticated end-user session.
+  if auth.uid() is null then
+    return new;
+  end if;
+
   if new.role is distinct from old.role and not public.is_staff() then
     new.role := old.role;
   end if;
