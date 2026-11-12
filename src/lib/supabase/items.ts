@@ -96,8 +96,6 @@ export async function submitItemClaim(input: {
     throw new Error('DUPLICATE_CLAIM');
   }
 
-  const ticketCode = `TKT-${new Date().toISOString().slice(2, 10).replaceAll('-', '')}-${Math.floor(1000 + Math.random() * 9000)}`;
-
   const { data, error } = await supabase
     .from('claims')
     .insert({
@@ -105,12 +103,16 @@ export async function submitItemClaim(input: {
       user_id: input.userId,
       private_answers: input.privateAnswers,
       contact_phone: input.contactPhone,
-      ticket_code: ticketCode,
     })
     .select('id, ticket_code')
     .single();
 
-  if (error) throw error;
+  if (error) {
+    if ((error as { code?: string }).code === '23505') {
+      throw new Error('DUPLICATE_CLAIM');
+    }
+    throw error;
+  }
   return data;
 }
 

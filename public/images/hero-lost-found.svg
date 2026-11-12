@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" width="1200" height="900" role="img">
+  <title>Barang temuan di meja lost and found</title>
+  <defs>
+    <filter id="heroShadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="16" />
+    </filter>
+  </defs>
+
+  <rect width="1200" height="900" fill="#f2f5f9" />
+  <circle cx="1015" cy="120" r="215" fill="#e9eff6" />
+
+  <!-- phone -->
+  <g transform="rotate(12 408 520)">
+    <ellipse cx="416" cy="620" rx="70" ry="16" fill="#123356" opacity=".10" filter="url(#heroShadow)" />
+    <rect x="360" y="432" width="96" height="176" rx="20" fill="#0f2b47" />
+    <rect x="370" y="446" width="76" height="148" rx="12" fill="#1d466e" />
+    <circle cx="408" cy="440" r="3" fill="#64748b" />
+  </g>
+
+  <!-- id card and lanyard -->
+  <g transform="rotate(-14 565 545)">
+    <ellipse cx="572" cy="650" rx="86" ry="18" fill="#123356" opacity=".08" filter="url(#heroShadow)" />
+    <path d="M 566 468 C 610 372 720 330 812 402" stroke="#1d466e" stroke-width="10" fill="none" stroke-linecap="round" />
+    <path d="M 558 470 C 600 386 700 352 802 422" stroke="#1d466e" stroke-width="10" fill="none" stroke-linecap="round" />
+    <rect x="548" y="452" width="34" height="28" rx="8" fill="#123356" />
+    <rect x="490" y="470" width="150" height="170" rx="16" fill="#ffffff" stroke="#dbe2ea" stroke-width="2" />
+    <rect x="508" y="492" width="64" height="68" rx="8" fill="#d9e2ec" />
+    <rect x="588" y="500" width="34" height="8" rx="4" fill="#c3cedb" />
+    <rect x="588" y="518" width="34" height="8" rx="4" fill="#c3cedb" />
+    <rect x="588" y="536" width="22" height="8" rx="4" fill="#c3cedb" />
+    <rect x="508" y="578" width="110" height="7" rx="3.5" fill="#e4eaf1" />
+    <rect x="508" y="594" width="80" height="7" rx="3.5" fill="#e4eaf1" />
+  </g>
+
+  <!-- tumbler -->
+  <ellipse cx="612" cy="842" rx="94" ry="14" fill="#123356" opacity=".10" filter="url(#heroShadow)" />
+  <g transform="rotate(90 610 800)">
+    <rect x="575" y="715" width="70" height="170" rx="30" fill="#d5dee9" />
+    <rect x="575" y="715" width="70" height="48" rx="24" fill="#123356" />
+    <rect x="575" y="768" width="70" height="9" fill="#c3cedb" />
+  </g>
+
+  <!-- wallet -->
+  <g transform="rotate(-10 420 788)">
+    <ellipse cx="428" cy="858" rx="96" ry="15" fill="#123356" opacity=".10" filter="url(#heroShadow)" />
+    <rect x="335" y="735" width="170" height="106" rx="20" fill="#3d5570" />
+    <rect x="351" y="752" width="140" height="52" rx="12" fill="#334a63" />
+    <rect x="443" y="777" width="40" height="28" rx="9" fill="#2b3f55" />
+    <circle cx="462" cy="791" r="8" fill="#c9d4e0" />
+  </g>
+
+  <!-- keys -->
+  <g transform="translate(770 800) rotate(-18)">
+    <ellipse cx="30" cy="46" rx="76" ry="12" fill="#123356" opacity=".09" filter="url(#heroShadow)" />
+    <circle cx="0" cy="0" r="25" stroke="#a9b7c8" stroke-width="9" fill="none" />
+    <rect x="-3" y="-56" width="34" height="24" rx="7" fill="#fbe156" />
+    <rect x="18" y="-9" width="86" height="18" rx="9" fill="#c9d4e0" />
+    <rect x="76" y="7" width="12" height="14" rx="3" fill="#c9d4e0" />
+    <rect x="94" y="7" width="10" height="10" rx="3" fill="#c9d4e0" />
+    <g transform="rotate(24)">
+      <rect x="18" y="-9" width="72" height="16" rx="8" fill="#b8c6d6" />
+      <rect x="68" y="5" width="10" height="12" rx="3" fill="#b8c6d6" />
+    </g>
+  </g>
+
+  <!-- earbuds case -->
+  <g>
+    <ellipse cx="1004" cy="862" rx="62" ry="13" fill="#123356" opacity=".09" filter="url(#heroShadow)" />
+    <rect x="950" y="762" width="104" height="92" rx="28" fill="#ffffff" stroke="#dbe2ea" stroke-width="2" />
+    <line x1="962" y1="800" x2="1042" y2="800" stroke="#e4eaf1" stroke-width="3" />
+    <circle cx="1002" cy="782" r="4" fill="#94a3b8" />
+  </g>
+
+  <!-- backpack -->
+  <g transform="rotate(-3 895 495)">
+    <ellipse cx="900" cy="712" rx="220" ry="46" fill="#123356" opacity=".10" filter="url(#heroShadow)" />
+    <rect x="729" y="522" width="30" height="58" rx="10" fill="#1d466e" />
+    <rect x="1031" y="522" width="30" height="58" rx="10" fill="#1d466e" />
+    <rect x="729" y="540" width="30" height="14" rx="5" fill="#c9d4e0" />
+    <rect x="1031" y="540" width="30" height="14" rx="5" fill="#c9d4e0" />
+    <path d="M 855 296 C 862 258 928 258 936 296" stroke="#0c233c" stroke-width="16" fill="none" stroke-linecap="round" />
+    <rect x="745" y="290" width="300" height="400" rx="70" fill="#123356" />
+    <rect x="775" y="322" width="240" height="220" rx="48" fill="#0c233c" />
+    <rect x="775" y="580" width="240" height="80" rx="24" fill="#1d466e" />
+    <line x1="798" y1="620" x2="992" y2="620" stroke="#0c233c" stroke-width="5" stroke-linecap="round" />
+    <rect x="868" y="524" width="54" height="40" rx="10" fill="#c9d4e0" />
+    <rect x="880" y="536" width="30" height="16" rx="6" fill="#64748b" />
+  </g>
+</svg>

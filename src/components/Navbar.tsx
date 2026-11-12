@@ -82,6 +82,26 @@ export default function Navbar() {
   };
 
   const isAuthPage = pathname === '/masuk' || pathname === '/daftar';
+  const isAdmin = profile?.role?.toLowerCase() === 'admin';
+  const catalogLabel = isAdmin ? 'List Barang' : 'Cari Barang';
+  const roleLabel = profile ? (isAdmin ? 'Admin' : 'Karyawan') : 'Akun pengguna';
+
+  const navLink = (path: string) =>
+    [
+      'relative flex min-h-11 items-center whitespace-nowrap px-1 text-sm transition-colors',
+      'after:absolute after:inset-x-0 after:bottom-1 after:h-0.5 after:rounded-pill after:transition-colors',
+      isCurrent(path)
+        ? 'font-semibold text-ink after:bg-brand'
+        : 'font-medium text-body after:bg-transparent hover:text-ink',
+    ].join(' ');
+
+  const mobileNavLink = (path: string) =>
+    [
+      'flex min-h-12 items-center rounded-control px-3 text-[15px] transition-colors',
+      isCurrent(path)
+        ? 'bg-surface-muted font-semibold text-ink'
+        : 'font-medium text-body hover:bg-surface-muted hover:text-ink',
+    ].join(' ');
 
   const handleLogout = async () => {
     await signOutUser();
@@ -94,98 +114,56 @@ export default function Navbar() {
 
   return (
     <header className="site-header">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        
+      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-4 px-4 sm:h-16 sm:px-6 lg:px-8">
         {/* Left: Brand */}
-        <div className="flex items-center gap-4">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center transition-transform group-hover:scale-105 shrink-0 overflow-hidden">
-              <Image
-                src="/logo.svg"
-                alt="Vinix Lost & Found Logo"
-                width={36}
-                height={36}
-                className="w-full h-full object-contain"
-                priority
-              />
-            </div>
-            <div className="flex flex-col">
-              <span className="font-bold text-[1.05rem] text-[#123356] tracking-tight leading-none">
-                Vinix L&amp;F
-              </span>
-              <span className="hidden sm:block text-[0.6875rem] font-medium text-slate-500 tracking-wider uppercase mt-0.5">
-                Portal Resmi
-              </span>
-            </div>
-          </Link>
-        </div>
+        <Link
+          href="/"
+          className="flex shrink-0 items-center gap-2.5 rounded-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+        >
+          <Image
+            src="/logo-mark.svg"
+            alt=""
+            width={53}
+            height={29}
+            className="h-7 w-auto"
+            priority
+          />
+          <span className="flex flex-col">
+            <span className="text-[15px] font-semibold leading-none text-ink">Vinix L&amp;F</span>
+            <span className="mt-1 hidden text-[11px] font-medium uppercase leading-none tracking-[0.12em] text-muted sm:block">
+              Portal Resmi
+            </span>
+          </span>
+        </Link>
 
         {/* Center: Navigation Links */}
         {!isAuthPage && authReady && (
           <>
-            {/* Desktop: horizontal pill nav */}
-            <nav aria-label="Navigasi Utama" className="hidden md:flex items-center gap-1 bg-black/4 p-1 rounded-xl border border-black/5">
-              <Link
-                href="/"
-                className={`px-3 py-1.5 rounded-lg text-[0.875rem] font-medium transition-all ${
-                  isCurrent('/') && pathname === '/'
-                    ? 'bg-white text-[#123356] shadow-sm font-semibold'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-                }`}
-              >
+            <nav aria-label="Navigasi Utama" className="hidden items-center gap-4 lg:flex lg:gap-5">
+              <Link href="/" className={navLink('/')}>
                 Beranda
               </Link>
-              <Link
-                href="/dashboard"
-                className={`px-3 py-1.5 rounded-lg text-[0.875rem] font-medium transition-all ${
-                  isCurrent('/dashboard')
-                    ? 'bg-white text-[#123356] shadow-sm font-semibold'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-                }`}
-              >
+              <Link href="/dashboard" className={navLink('/dashboard')}>
                 Dashboard
               </Link>
-              <Link
-                href="/cari"
-                className={`px-3 py-1.5 rounded-lg text-[0.875rem] font-medium transition-all ${
-                  isCurrent('/cari')
-                    ? 'bg-white text-[#123356] shadow-sm font-semibold'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-                }`}
-              >
-                {(profile?.role?.toLowerCase() === 'admin') ? 'List Barang' : 'Cari Barang'}
+              <Link href="/cari" className={navLink('/cari')}>
+                {catalogLabel}
               </Link>
-              {profile && <Link
-                href="/lapor"
-                className={`px-3 py-1.5 rounded-lg text-[0.875rem] font-medium transition-all ${
-                  isCurrent('/lapor')
-                    ? 'bg-white text-[#123356] shadow-sm font-semibold'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-                }`}
-              >
-                Lapor Barang
-              </Link>}
-
-              {profile && (profile.role?.toLowerCase() === 'admin') && <Link
-                href="/admin"
-                className={`px-3 py-1.5 rounded-lg text-[0.875rem] font-medium transition-all ${
-                  isCurrent('/admin')
-                    ? 'bg-white text-[#123356] shadow-sm font-semibold'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-                }`}
-              >
-                Admin
-              </Link>}
-              {profile && <Link
-                href="/laporan-saya"
-                className={`px-3 py-1.5 rounded-lg text-[0.875rem] font-medium transition-all ${
-                  isCurrent('/laporan-saya')
-                    ? 'bg-white text-[#123356] shadow-sm font-semibold'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-                }`}
-              >
-                Laporan Saya
-              </Link>}
+              {profile && (
+                <Link href="/lapor" className={navLink('/lapor')}>
+                  Lapor Barang
+                </Link>
+              )}
+              {isAdmin && (
+                <Link href="/admin" className={navLink('/admin')}>
+                  Admin
+                </Link>
+              )}
+              {profile && (
+                <Link href="/laporan-saya" className={navLink('/laporan-saya')}>
+                  Laporan Saya
+                </Link>
+              )}
             </nav>
 
             {/* Mobile menu overlay is portaled to the body below */}
@@ -195,88 +173,104 @@ export default function Navbar() {
                 role="dialog"
                 aria-modal="true"
                 aria-label="Menu navigasi"
-                className="md:hidden fixed inset-0 z-[60] flex flex-col bg-white shadow-2xl"
+                className="fixed inset-0 z-[60] flex flex-col bg-surface lg:hidden"
               >
-                <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))' }}>
-                  <span className="font-bold text-[#123356] tracking-tight">Vinix L&amp;F</span>
+                <div
+                  className="flex items-center justify-between border-b border-line px-4 py-2.5"
+                  style={{ paddingTop: 'calc(0.625rem + env(safe-area-inset-top))' }}
+                >
+                  <span className="flex items-center gap-2.5">
+                    <Image src="/logo-mark.svg" alt="" width={44} height={24} className="h-6 w-auto" />
+                    <span className="text-[15px] font-semibold text-ink">Vinix L&amp;F</span>
+                  </span>
                   <button
                     type="button"
                     onClick={() => setMobileNavOpen(false)}
-                    className="flex items-center justify-center w-10 h-10 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-colors"
+                    className="flex size-11 items-center justify-center rounded-control text-muted transition-colors hover:bg-surface-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                     aria-label="Tutup menu"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="size-5" />
                   </button>
                 </div>
-                <nav aria-label="Navigasi Seluler" className="flex-1 px-4 py-4 space-y-1 overflow-y-auto max-h-[calc(100dvh-100px)] [&>a]:min-h-11 [&>a]:flex [&>a]:items-center">
-                  <Link
-                    href="/"
-                    onClick={() => setMobileNavOpen(false)}
-                    className={`block px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${isCurrent('/') && pathname === '/' ? 'bg-[#123356]/10 text-[#123356] font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
-                  >
+
+                <nav
+                  aria-label="Navigasi Seluler"
+                  className="flex-1 space-y-1 overflow-y-auto px-4 py-4"
+                >
+                  <Link href="/" onClick={() => setMobileNavOpen(false)} className={mobileNavLink('/')}>
                     Beranda
                   </Link>
-                  <Link
-                    href="/dashboard"
-                    onClick={() => setMobileNavOpen(false)}
-                    className={`block px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${isCurrent('/dashboard') ? 'bg-[#123356]/10 text-[#123356] font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
-                  >
+                  <Link href="/dashboard" onClick={() => setMobileNavOpen(false)} className={mobileNavLink('/dashboard')}>
                     Dashboard
                   </Link>
-                  <Link
-                    href="/cari"
-                    onClick={() => setMobileNavOpen(false)}
-                    className={`block px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${isCurrent('/cari') ? 'bg-[#123356]/10 text-[#123356] font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
-                  >
-                    {(profile?.role?.toLowerCase() === 'admin') ? 'List Barang' : 'Cari Barang'}
+                  <Link href="/cari" onClick={() => setMobileNavOpen(false)} className={mobileNavLink('/cari')}>
+                    {catalogLabel}
                   </Link>
                   {profile && (
-                    <Link
-                      href="/lapor"
-                      onClick={() => setMobileNavOpen(false)}
-                      className={`block px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${isCurrent('/lapor') ? 'bg-[#123356]/10 text-[#123356] font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
-                    >
+                    <Link href="/lapor" onClick={() => setMobileNavOpen(false)} className={mobileNavLink('/lapor')}>
                       Lapor Barang
                     </Link>
                   )}
-                  {profile && (profile.role?.toLowerCase() === 'admin') && (
-                    <Link
-                      href="/admin"
-                      onClick={() => setMobileNavOpen(false)}
-                      className={`block px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${isCurrent('/admin') ? 'bg-[#123356]/10 text-[#123356] font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
-                    >
+                  {isAdmin && (
+                    <Link href="/admin" onClick={() => setMobileNavOpen(false)} className={mobileNavLink('/admin')}>
                       Admin
                     </Link>
                   )}
                   {profile && (
-                    <Link
-                      href="/laporan-saya"
-                      onClick={() => setMobileNavOpen(false)}
-                      className={`block px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${isCurrent('/laporan-saya') ? 'bg-[#123356]/10 text-[#123356] font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
-                    >
+                    <Link href="/laporan-saya" onClick={() => setMobileNavOpen(false)} className={mobileNavLink('/laporan-saya')}>
                       Laporan Saya
                     </Link>
                   )}
                 </nav>
-                <div className="px-4 py-3 border-t border-slate-100" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
-                  <div className="flex items-center gap-2 px-2 mb-2">
-                    <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs">
+
+                <div
+                  className="border-t border-line px-4 py-3"
+                  style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
+                >
+                  <div className="mb-2 flex items-center gap-2.5 px-1">
+                    <div className="flex size-9 items-center justify-center rounded-full bg-surface-muted text-xs font-semibold text-body">
                       {profile?.initials || '?'}
                     </div>
-                    <div className="flex flex-col">
-                      <span className="text-xs font-semibold text-slate-900 leading-tight">{profile?.name || 'Masuk'}</span>
-                      <span className="text-[10px] text-slate-500 leading-none">{profile ? ((profile.role?.toLowerCase() === 'admin') ? 'Admin' : 'Karyawan') : 'Akun pengguna'}</span>
+                    <div className="flex min-w-0 flex-col">
+                      <span className="truncate text-[13px] font-semibold leading-tight text-ink">
+                        {profile?.name || 'Masuk'}
+                      </span>
+                      <span className="text-xs leading-tight text-muted">{roleLabel}</span>
                     </div>
                   </div>
                   {profile ? (
                     <>
-                      <Link href="/pengaturan" onClick={() => setMobileNavOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-slate-700 hover:bg-slate-50"><Settings className="w-4 h-4" /> Pengaturan akun</Link>
-                      <button type="button" onClick={handleLogout} className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 min-h-11 text-left text-xs text-rose-700 hover:bg-rose-50"><LogOut className="w-4 h-4" /> Keluar</button>
+                      <Link
+                        href="/pengaturan"
+                        onClick={() => setMobileNavOpen(false)}
+                        className="flex min-h-11 items-center gap-2 rounded-control px-3 text-[13px] text-body transition-colors hover:bg-surface-muted hover:text-ink"
+                      >
+                        <Settings className="size-4" /> Pengaturan akun
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="flex min-h-11 w-full items-center gap-2 rounded-control px-3 text-left text-[13px] text-danger transition-colors hover:bg-danger-soft"
+                      >
+                        <LogOut className="size-4" /> Keluar
+                      </button>
                     </>
                   ) : (
                     <>
-                      <Link href="/masuk" onClick={() => setMobileNavOpen(false)} className="block rounded-lg px-3 py-2 text-xs text-slate-700 hover:bg-slate-50">Masuk ke akun</Link>
-                      <Link href="/daftar" onClick={() => setMobileNavOpen(false)} className="block rounded-lg px-3 py-2 text-xs text-slate-700 hover:bg-slate-50">Buat akun baru</Link>
+                      <Link
+                        href="/masuk"
+                        onClick={() => setMobileNavOpen(false)}
+                        className="flex min-h-11 items-center rounded-control px-3 text-[13px] text-body transition-colors hover:bg-surface-muted hover:text-ink"
+                      >
+                        Masuk ke akun
+                      </Link>
+                      <Link
+                        href="/daftar"
+                        onClick={() => setMobileNavOpen(false)}
+                        className="flex min-h-11 items-center rounded-control px-3 text-[13px] text-body transition-colors hover:bg-surface-muted hover:text-ink"
+                      >
+                        Buat akun baru
+                      </Link>
                     </>
                   )}
                 </div>
@@ -287,14 +281,14 @@ export default function Navbar() {
         )}
 
         {/* Right Action: Search icon + notification bell + user profile pill */}
-        <div className="flex items-center gap-1.5 sm:gap-2.5">
+        <div className="flex items-center gap-1 sm:gap-2">
           <Link
             href="/cari"
-            className="hidden min-[360px]:inline-flex items-center justify-center w-9 h-9 rounded-lg hover:bg-black/6 text-slate-500 transition-all"
-            title={(profile?.role?.toLowerCase() === 'admin') ? 'List Barang' : 'Cari Barang'}
-            aria-label={(profile?.role?.toLowerCase() === 'admin') ? 'List Barang' : 'Cari Barang'}
+            className="hidden size-11 items-center justify-center rounded-control text-body transition-colors hover:bg-surface-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 min-[360px]:inline-flex"
+            title={catalogLabel}
+            aria-label={catalogLabel}
           >
-            <Search className="w-4.5 h-4.5" />
+            <Search className="size-[18px]" />
           </Link>
 
           {authReady && profile && (
@@ -302,54 +296,85 @@ export default function Navbar() {
           )}
 
           <div className="relative">
-          <button
-            type="button"
-            onClick={() => setMenuOpen((open) => !open)}
-            className="flex items-center gap-2.5 p-1 pl-2.5 pr-3 rounded-full bg-white border border-slate-200/80 shadow-xs hover:shadow-sm hover:border-slate-300 transition-all"
-            aria-expanded={menuOpen}
-            aria-haspopup="menu"
-          >
-            <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs">
-              {profile?.initials || '?'}
-            </div>
-            <div className="hidden sm:flex flex-col text-left">
-              <span className="text-xs font-semibold text-slate-900 leading-tight">{profile?.name || 'Masuk'}</span>
-              <span className="text-[10px] text-slate-500 leading-none">{profile ? ((profile.role?.toLowerCase() === 'admin') ? 'Admin' : 'Karyawan') : 'Akun pengguna'}</span>
-            </div>
-          </button>
-          {menuOpen && (
-            <div role="menu" className="absolute right-0 top-12 z-50 w-48 rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
-              {profile ? (
-                <>
-                  <Link href="/pengaturan" role="menuitem" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-slate-700 hover:bg-slate-50"><Settings className="w-4 h-4" /> Pengaturan akun</Link>
-                  <button type="button" role="menuitem" onClick={handleLogout} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-rose-700 hover:bg-rose-50"><LogOut className="w-4 h-4" /> Keluar</button>
-                </>
-              ) : (
-                <>
-                  <Link href="/masuk" role="menuitem" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-2 text-xs text-slate-700 hover:bg-slate-50">Masuk ke akun</Link>
-                  <Link href="/daftar" role="menuitem" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-2 text-xs text-slate-700 hover:bg-slate-50">Buat akun baru</Link>
-                </>
-              )}
-            </div>
-          )}
+            <button
+              type="button"
+              onClick={() => setMenuOpen((open) => !open)}
+              className="flex min-h-11 items-center gap-2.5 rounded-pill border border-line bg-surface py-1 pl-1.5 pr-2.5 transition-colors hover:border-line-strong hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              aria-expanded={menuOpen}
+              aria-haspopup="menu"
+            >
+              <span className="flex size-8 items-center justify-center rounded-full bg-brand text-[11px] font-semibold text-inverse">
+                {profile?.initials || '?'}
+              </span>
+              <span className="hidden min-w-0 flex-col text-left sm:flex">
+                <span className="max-w-[9rem] truncate text-[13px] font-semibold leading-tight text-ink">
+                  {profile?.name || 'Masuk'}
+                </span>
+                <span className="text-xs leading-tight text-muted">{roleLabel}</span>
+              </span>
+            </button>
+            {menuOpen && (
+              <div
+                role="menu"
+                className="absolute right-0 top-[calc(100%+8px)] z-50 w-52 rounded-surface border border-line bg-surface p-1.5 shadow-overlay"
+              >
+                {profile ? (
+                  <>
+                    <Link
+                      href="/pengaturan"
+                      role="menuitem"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex min-h-11 items-center gap-2 rounded-control px-3 text-[13px] text-body transition-colors hover:bg-surface-muted hover:text-ink"
+                    >
+                      <Settings className="size-4" /> Pengaturan akun
+                    </Link>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={handleLogout}
+                      className="flex min-h-11 w-full items-center gap-2 rounded-control px-3 text-left text-[13px] text-danger transition-colors hover:bg-danger-soft"
+                    >
+                      <LogOut className="size-4" /> Keluar
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      href="/masuk"
+                      role="menuitem"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex min-h-11 items-center rounded-control px-3 text-[13px] text-body transition-colors hover:bg-surface-muted hover:text-ink"
+                    >
+                      Masuk ke akun
+                    </Link>
+                    <Link
+                      href="/daftar"
+                      role="menuitem"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex min-h-11 items-center rounded-control px-3 text-[13px] text-body transition-colors hover:bg-surface-muted hover:text-ink"
+                    >
+                      Buat akun baru
+                    </Link>
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           {!isAuthPage && authReady && (
             <button
               type="button"
               onClick={() => setMobileNavOpen((open) => !open)}
-              className="md:hidden flex items-center gap-1.5 h-10 pl-2 pr-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 active:bg-slate-100 transition-colors"
+              className="flex size-11 items-center justify-center rounded-control border border-line bg-surface text-body transition-colors hover:border-line-strong hover:bg-surface-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 lg:hidden"
               aria-expanded={mobileNavOpen}
               aria-haspopup="dialog"
               aria-controls="mobile-nav"
               aria-label="Buka menu navigasi"
             >
-              <Menu className="w-5 h-5" />
-              <span className="text-[11px] font-semibold">Menu</span>
+              <Menu className="size-5" />
             </button>
           )}
         </div>
-
       </div>
     </header>
   );

@@ -5,6 +5,7 @@ import { CheckCircle2 } from 'lucide-react';
 import type { LostReport } from '@/types/claims';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
+import { TextInput, TextArea } from '@/components/ui/Field';
 import { DEFAULT_PICKUP_LOCATION } from '@/lib/locations';
 
 interface CustodyChainModalProps {
@@ -18,6 +19,37 @@ interface CustodyChainModalProps {
   }) => void;
   isPending: boolean;
   quickLocations: string[];
+}
+
+function QuickLocationChips({
+  value,
+  options,
+  onSelect,
+}: {
+  value: string;
+  options: string[];
+  onSelect: (location: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-1.5 pt-1">
+      {options.map((loc) => (
+        <button
+          key={loc}
+          type="button"
+          onClick={() => onSelect(loc)}
+          aria-pressed={value === loc}
+          className={[
+            'min-h-8 rounded-control border px-2.5 text-[11px] font-medium transition-colors',
+            value === loc
+              ? 'border-brand bg-brand text-inverse'
+              : 'border-line bg-surface text-body hover:border-line-strong hover:bg-surface-muted',
+          ].join(' ')}
+        >
+          {loc}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 export function CustodyChainModal({
@@ -53,99 +85,67 @@ export function CustodyChainModal({
       size="md"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="rounded-xl bg-sky-50 border border-sky-100 p-3.5 text-xs text-sky-900 leading-relaxed">
+        <div className="rounded-surface border border-info/20 bg-info-soft p-3.5 text-[13px] leading-5 text-body">
           Lengkapi data orang yang menyerahkan barang dan lokasi penyimpanan fisik agar riwayat rantai penanganan (chain of custody) tercatat di linimasa pelapor.
         </div>
 
-        <div>
-          <label htmlFor="finder-name" className="text-xs font-bold text-slate-700 block mb-1">
-            Nama / Identitas Penemu Barang
-          </label>
-          <input
-            id="finder-name"
-            type="text"
-            value={finderName}
-            onChange={(e) => setFinderName(e.target.value)}
-            placeholder="Contoh: Budi Santoso (karyawan FT) / Petugas Kebersihan"
-            className="form-input w-full text-xs sm:text-sm"
-          />
-        </div>
+        <TextInput
+          id="finder-name"
+          label="Nama / Identitas Penemu Barang"
+          value={finderName}
+          onChange={(e) => setFinderName(e.target.value)}
+          placeholder="Contoh: Budi Santoso (karyawan FT) / Petugas Kebersihan"
+        />
 
-        <div>
-          <label htmlFor="found-location" className="text-xs font-bold text-slate-700 block mb-1">
-            Lokasi Ditemukan
-          </label>
-          <input
-            id="found-location"
-            type="text"
-            value={foundLocation}
-            onChange={(e) => setFoundLocation(e.target.value)}
-            placeholder="Contoh: Meja dekat Resepsionis, Ruang Meeting"
-            className="form-input w-full text-xs sm:text-sm"
-          />
-        </div>
+        <TextInput
+          id="found-location"
+          label="Lokasi Ditemukan"
+          value={foundLocation}
+          onChange={(e) => setFoundLocation(e.target.value)}
+          placeholder="Contoh: Meja dekat Resepsionis, Ruang Meeting"
+        />
 
-        <div>
-          <label htmlFor="storage-location" className="text-xs font-bold text-slate-700 block mb-1">
-            Lokasi Penyimpanan Barang
-          </label>
-          <input
+        <div className="space-y-1.5">
+          <TextInput
             id="storage-location"
-            type="text"
+            label="Lokasi Penyimpanan Barang"
             value={storageLocation}
             onChange={(e) => setStorageLocation(e.target.value)}
             placeholder="Contoh: Resepsionis / Lobi Utama VINIX7"
-            className="form-input w-full text-xs sm:text-sm"
           />
-          <div className="flex flex-wrap gap-1.5 mt-2">
-            {quickLocations.map((loc) => (
-              <button
-                key={loc}
-                type="button"
-                onClick={() => setStorageLocation(loc)}
-                className={`text-[11px] px-2.5 py-1 rounded-md border transition-colors ${
-                  storageLocation === loc
-                    ? 'bg-[#123356] text-white border-[#123356]'
-                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                }`}
-              >
-                {loc}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <label htmlFor="found-note" className="text-xs font-bold text-slate-700 block mb-1">
-            Catatan Kondisi Barang (Opsional)
-          </label>
-          <textarea
-            id="found-note"
-            rows={2}
-            value={foundNote}
-            onChange={(e) => setFoundNote(e.target.value)}
-            placeholder="Contoh: Kondisi layar mulus, baterai habis, disimpan di loker posko."
-            className="form-input w-full text-xs sm:text-sm"
+          <QuickLocationChips
+            value={storageLocation}
+            options={quickLocations}
+            onSelect={setStorageLocation}
           />
         </div>
 
-        <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+        <TextArea
+          id="found-note"
+          label="Catatan Kondisi Barang (Opsional)"
+          rows={2}
+          value={foundNote}
+          onChange={(e) => setFoundNote(e.target.value)}
+          placeholder="Contoh: Kondisi layar mulus, baterai habis, disimpan di loker posko."
+        />
+
+        <div className="flex flex-col-reverse gap-2.5 border-t border-line pt-4 sm:flex-row sm:justify-end">
           <Button
             type="button"
             variant="secondary"
             onClick={onClose}
             disabled={isPending}
+            className="w-full sm:w-auto"
           >
             Batal
           </Button>
           <Button
             type="submit"
-            variant="primary"
             loading={isPending}
-            className="bg-sky-700 hover:bg-sky-800"
+            className="w-full sm:w-auto"
           >
-            <CheckCircle2 className="w-4 h-4" />
-            Simpan & Tandai Ditemukan
+            {!isPending && <CheckCircle2 className="size-4" aria-hidden="true" />}
+            Simpan &amp; Tandai Ditemukan
           </Button>
         </div>
       </form>

@@ -8,6 +8,21 @@ import { createClient } from '@/lib/supabase/client';
 import { formatDate } from '@/lib/date';
 import { fetchLatestUserReport, type UserReportRow } from '@/lib/supabase/reports';
 
+const CARE_PILLARS = [
+  {
+    title: 'Smart Search',
+    description: 'Pencarian instan berdasarkan kategori dan lokasi di area kantor.',
+  },
+  {
+    title: 'Secret Ownership',
+    description: 'Ciri privat terjaga aman dan hanya dibuka saat verifikasi fisik.',
+  },
+  {
+    title: 'Real-Time Tracking',
+    description: 'Pembaruan status langsung di layar tanpa perlu bolak-balik ke pos.',
+  },
+];
+
 export default function DashboardPage() {
   const [userName, setUserName] = useState('Karyawan');
   const [activeReportCount, setActiveReportCount] = useState(0);
@@ -34,43 +49,40 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
-      
+    <div className="mx-auto max-w-7xl space-y-10 px-4 py-10 sm:px-6 lg:px-8">
       {/* Header Greeting */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-[#123356] tracking-tight">
+      <div className="flex flex-col justify-between gap-4 border-b border-line pb-6 sm:flex-row sm:items-end">
+        <div className="min-w-0 space-y-1.5">
+          <h1 className="text-balance text-3xl font-semibold tracking-tight text-ink sm:text-[2.125rem] sm:leading-[1.15]">
             Selamat datang, {userName}.
           </h1>
-          <p className="text-base text-slate-600 mt-1">
+          <p className="text-pretty text-sm leading-6 text-body">
             Apa yang ingin kamu lakukan hari ini?
           </p>
         </div>
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sky-100/90 text-sky-800 text-xs font-bold uppercase tracking-wider self-start sm:self-auto border border-sky-200">
-          <span className="w-2 h-2 rounded-full bg-sky-600 animate-pulse" />
+        <span className="inline-flex w-fit shrink-0 items-center gap-2 rounded-pill border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-body">
+          <span className="size-2 rounded-full bg-accent" aria-hidden="true" />
           <span>{activeReportCount} Laporan Aktif</span>
-        </div>
+        </span>
       </div>
 
       {/* Action cards grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {/* Card 1: Cari Barang (Featured Dark Blue Card) */}
-        <div className="rounded-2xl p-6 bg-[#123356] text-white flex flex-col justify-between shadow-lg relative overflow-hidden group">
-          <div className="absolute -right-4 -bottom-4 w-28 h-28 bg-white/5 rounded-full pointer-events-none transition-transform group-hover:scale-125" />
+        <div className="flex flex-col justify-between rounded-card bg-brand p-5 text-inverse">
           <div className="space-y-3">
-            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-sky-300">
-              <Search className="w-5 h-5" />
+            <div className="flex size-10 items-center justify-center rounded-surface bg-white/10">
+              <Search className="size-5" aria-hidden="true" />
             </div>
-            <h2 className="text-lg font-bold text-white">Cari Barang</h2>
-            <p className="text-xs text-slate-300 leading-relaxed">
+            <h2 className="text-[17px] font-semibold leading-6 text-white">Cari Barang</h2>
+            <p className="text-pretty text-[13px] leading-5 text-white/70">
               Telusuri katalog barang temuan dengan pencarian berdasarkan kategori, lokasi, dan tanggal.
             </p>
           </div>
           <div className="pt-6">
             <Link
               href="/cari"
-              className="w-full py-2.5 px-4 rounded-xl bg-white text-[#123356] hover:bg-sky-50 text-xs font-bold text-center block transition-all shadow-xs active:scale-95"
+              className="flex min-h-11 w-full items-center justify-center rounded-control bg-surface px-4 text-center text-[13px] font-semibold text-brand transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-highlight/60"
             >
               Mulai Pencarian
             </Link>
@@ -78,140 +90,126 @@ export default function DashboardPage() {
         </div>
 
         {/* Card 2: Lapor Barang Hilang */}
-        <div className="apple-card p-6 flex flex-col justify-between">
+        <div className="flex flex-col justify-between rounded-card border border-line bg-surface p-5">
           <div className="space-y-3">
-            <div className="w-10 h-10 rounded-xl bg-sky-50 text-sky-700 flex items-center justify-center">
-              <FileText className="w-5 h-5" />
+            <div className="flex size-10 items-center justify-center rounded-surface bg-surface-muted text-ink">
+              <FileText className="size-5" aria-hidden="true" />
             </div>
-            <h2 className="text-lg font-bold text-[#123356]">Lapor Barang Hilang</h2>
-            <p className="text-xs text-slate-500 leading-relaxed">
+            <h2 className="text-[17px] font-semibold leading-6 text-ink">Lapor Barang Hilang</h2>
+            <p className="text-pretty text-[13px] leading-5 text-body">
               Buat laporan agar tim internal membantu pencarian di area kantor dan pos/penyimpanan barang.
             </p>
           </div>
           <div className="pt-6">
             <Link
               href="/lapor?type=hilang"
-              className="text-xs font-bold text-sky-700 hover:text-sky-900 inline-flex items-center gap-1.5 group"
+              className="inline-flex min-h-11 items-center gap-1.5 text-[13px] font-semibold text-accent transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             >
               <span>Buat Laporan Hilang</span>
-              <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+              <ArrowRight className="size-3.5" aria-hidden="true" />
             </Link>
           </div>
         </div>
 
         {/* Card 3: Lapor Barang Temuan */}
-        <div className="apple-card p-6 flex flex-col justify-between">
+        <div className="flex flex-col justify-between rounded-card border border-line bg-surface p-5">
           <div className="space-y-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
-              <PlusCircle className="w-5 h-5" />
+            <div className="flex size-10 items-center justify-center rounded-surface bg-surface-muted text-ink">
+              <PlusCircle className="size-5" aria-hidden="true" />
             </div>
-            <h2 className="text-lg font-bold text-[#123356]">Lapor Barang Temuan</h2>
-            <p className="text-xs text-slate-500 leading-relaxed">
+            <h2 className="text-[17px] font-semibold leading-6 text-ink">Lapor Barang Temuan</h2>
+            <p className="text-pretty text-[13px] leading-5 text-body">
               Bantu pemilik menemukan kembali barangnya dengan mencatat lokasi dan ciri umumnya.
             </p>
           </div>
           <div className="pt-6">
             <Link
               href="/lapor?type=temuan"
-              className="text-xs font-bold text-sky-700 hover:text-sky-900 inline-flex items-center gap-1.5 group"
+              className="inline-flex min-h-11 items-center gap-1.5 text-[13px] font-semibold text-accent transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             >
               <span>Laporkan Barang Temuan</span>
-              <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+              <ArrowRight className="size-3.5" aria-hidden="true" />
             </Link>
           </div>
         </div>
 
         {/* Card 4: Laporan Saya */}
-        <div className="apple-card p-6 flex flex-col justify-between">
+        <div className="flex flex-col justify-between rounded-card border border-line bg-surface p-5">
           <div className="space-y-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center">
-              <PackageSearch className="w-5 h-5" />
+            <div className="flex size-10 items-center justify-center rounded-surface bg-surface-muted text-ink">
+              <PackageSearch className="size-5" aria-hidden="true" />
             </div>
-            <h2 className="text-lg font-bold text-[#123356]">Laporan Saya</h2>
-            <p className="text-xs text-slate-500 leading-relaxed">
+            <h2 className="text-[17px] font-semibold leading-6 text-ink">Laporan Saya</h2>
+            <p className="text-pretty text-[13px] leading-5 text-body">
               Pantau progres status verifikasi laporan dan tindak lanjuti klaim kepemilikanmu.
             </p>
           </div>
           <div className="pt-6">
             <Link
               href="/laporan-saya"
-              className="text-xs font-bold text-sky-700 hover:text-sky-900 inline-flex items-center gap-1.5 group"
+              className="inline-flex min-h-11 items-center gap-1.5 text-[13px] font-semibold text-accent transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             >
               <span>Lihat Semua Laporan</span>
-              <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+              <ArrowRight className="size-3.5" aria-hidden="true" />
             </Link>
           </div>
         </div>
-
       </div>
 
       {/* Active Report Banner */}
       {latestReport && (
-      <div className="rounded-2xl p-5 bg-sky-50/80 border border-sky-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center shrink-0">
-            <Clock className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-bold text-sm text-[#123356]">{latestReport.item_title}</span>
-              <span className="text-xs text-slate-500">· {latestReport.report_code}</span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                {latestReport.status.toUpperCase()}
-              </span>
+        <div className="flex flex-col justify-between gap-4 rounded-card border border-line bg-info-soft p-4 sm:flex-row sm:items-center sm:p-5">
+          <div className="flex items-start gap-3.5 sm:items-center">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-surface bg-surface text-ink">
+              <Clock className="size-5" aria-hidden="true" />
             </div>
-            <p className="text-xs text-slate-600 mt-0.5">
-              {latestReport.public_description} · Diperbarui {formatDate(latestReport.updated_at)}
-            </p>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="text-sm font-semibold text-ink">{latestReport.item_title}</span>
+                <span className="text-xs text-muted">· {latestReport.report_code}</span>
+                <span className="rounded-pill border border-line bg-surface px-2 py-0.5 text-[11px] font-semibold tracking-wide text-body">
+                  {latestReport.status.toUpperCase()}
+                </span>
+              </div>
+              <p className="mt-0.5 line-clamp-2 text-pretty text-[13px] leading-5 text-body">
+                {latestReport.public_description} · Diperbarui {formatDate(latestReport.updated_at)}
+              </p>
+            </div>
           </div>
-        </div>
 
-        <Link
-          href={`/lacak?report=${latestReport.id}`}
-          className="btn-primary text-xs py-2 px-4 shrink-0"
-        >
-          Lacak Laporan
-        </Link>
-      </div>
+          <Link
+            href={`/lacak?report=${latestReport.id}`}
+            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-control bg-brand px-4 text-[13px] font-semibold text-inverse transition-colors hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          >
+            Lacak Laporan
+          </Link>
+        </div>
       )}
 
       {/* Vinix Care System Strip */}
-      <div className="apple-card p-6 sm:p-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-          <div className="lg:col-span-4 space-y-1">
-            <span className="text-[11px] font-bold text-sky-700 uppercase tracking-wider block">
+      <div className="rounded-card border border-line bg-surface p-6 sm:p-8">
+        <div className="grid grid-cols-1 items-center gap-6 lg:grid-cols-12 lg:gap-8">
+          <div className="space-y-1.5 lg:col-span-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
               Vinix Care System
-            </span>
-            <h3 className="text-xl font-extrabold text-[#123356]">
+            </p>
+            <h3 className="text-balance text-xl font-semibold leading-7 text-ink">
               Lebih cepat ditemukan. Lebih aman diklaim.
             </h3>
-            <p className="text-xs text-slate-500">
+            <p className="text-pretty text-[13px] leading-5 text-body">
               Tiga pilar layanan menjaga keamanan barang setiap karyawan.
             </p>
           </div>
-          <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-100 space-y-1">
-              <span className="text-xs font-bold text-slate-800 block">Smart Search</span>
-              <p className="text-[11px] text-slate-500">
-                Pencarian instan berdasarkan kategori dan lokasi di area kantor.
-              </p>
-            </div>
-            <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-100 space-y-1">
-              <span className="text-xs font-bold text-slate-800 block">Secret Ownership</span>
-              <p className="text-[11px] text-slate-500">
-                Ciri privat terjaga aman dan hanya dibuka saat verifikasi fisik.
-              </p>
-            </div>
-            <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-100 space-y-1">
-              <span className="text-xs font-bold text-slate-800 block">Real-Time Tracking</span>
-              <p className="text-[11px] text-slate-500">
-                Pembaruan status langsung di layar tanpa perlu bolak-balik ke pos.
-              </p>
-            </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:col-span-8">
+            {CARE_PILLARS.map((pillar) => (
+              <div key={pillar.title} className="space-y-1 rounded-surface border border-line bg-surface-muted p-4">
+                <span className="block text-[13px] font-semibold text-ink">{pillar.title}</span>
+                <p className="text-pretty text-xs leading-5 text-body">{pillar.description}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
-
     </div>
   );
 }

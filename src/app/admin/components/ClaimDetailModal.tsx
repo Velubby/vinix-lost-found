@@ -7,6 +7,7 @@ import { STATUS_LABELS } from '@/types/claims';
 import { formatDate } from '@/lib/date';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
+import { TextInput } from '@/components/ui/Field';
 import { DEFAULT_PICKUP_LOCATION } from '@/lib/locations';
 
 interface ClaimDetailModalProps {
@@ -19,6 +20,15 @@ interface ClaimDetailModalProps {
   isPending: boolean;
   isMarkingHandedOver: boolean;
   quickLocations: string[];
+}
+
+function SummaryRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <p className="text-[13px] leading-5 text-body">
+      <span className="text-muted">{label}: </span>
+      {children}
+    </p>
+  );
 }
 
 export function ClaimDetailModal({
@@ -48,87 +58,77 @@ export function ClaimDetailModal({
     >
       <div className="space-y-6">
         {/* Claimant Confidential Answers */}
-        <div className="rounded-xl bg-amber-50/70 border border-amber-200 p-4">
-          <span className="text-xs font-bold text-amber-900 uppercase tracking-wide block">
+        <div className="rounded-surface border border-warning/20 bg-warning-soft p-4">
+          <span className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-warning">
             Ciri privat yang dijelaskan pemohon:
           </span>
-          <p className="mt-2 whitespace-pre-line text-sm text-slate-800 leading-relaxed font-medium">
+          <p className="mt-2 whitespace-pre-line text-pretty text-sm font-medium leading-6 text-ink">
             {claim.private_answers}
           </p>
         </div>
 
         {/* Profile & Item Summary */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-          <div className="rounded-xl border border-slate-200 p-3.5 space-y-1">
-            <span className="text-slate-500 font-semibold uppercase tracking-wider block">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="space-y-1 rounded-surface border border-line bg-surface-muted p-4">
+            <span className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
               Data Pemohon
             </span>
-            <p className="text-sm font-bold text-slate-900">
+            <p className="text-sm font-semibold text-ink">
               {claim.claimant?.full_name}
             </p>
-            <p className="text-slate-600">
-              ID Karyawan: {claim.claimant?.employee_id || 'Belum diisi'}
-            </p>
-            <p className="text-slate-600">
-              Departemen: {claim.claimant?.department || 'Belum diisi'}
-            </p>
+            <SummaryRow label="ID Karyawan">{claim.claimant?.employee_id || 'Belum diisi'}</SummaryRow>
+            <SummaryRow label="Departemen">{claim.claimant?.department || 'Belum diisi'}</SummaryRow>
             {claim.contact_phone && (
-              <p className="text-slate-600">
-                No. Telepon: {claim.contact_phone}
-              </p>
+              <SummaryRow label="No. Telepon">{claim.contact_phone}</SummaryRow>
             )}
           </div>
 
-          <div className="rounded-xl border border-slate-200 p-3.5 space-y-1">
-            <span className="text-slate-500 font-semibold uppercase tracking-wider block">
+          <div className="space-y-1 rounded-surface border border-line bg-surface-muted p-4">
+            <span className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
               Informasi Barang Temuan
             </span>
-            <p className="text-sm font-bold text-slate-900">
+            <p className="text-sm font-semibold text-ink">
               {claim.item?.title}
             </p>
-            <p className="text-slate-600">
-              Lokasi: {claim.item?.location}
-            </p>
-            <p className="text-slate-600">
-              Status saat ini: {claim.status === 'disetujui' && claim.pickup_at ? 'Sudah diambil' : STATUS_LABELS[claim.status]}
-            </p>
+            <SummaryRow label="Lokasi">{claim.item?.location}</SummaryRow>
+            <SummaryRow label="Status saat ini">
+              {claim.status === 'disetujui' && claim.pickup_at ? 'Sudah diambil' : STATUS_LABELS[claim.status]}
+            </SummaryRow>
           </div>
         </div>
 
         {/* Pickup Location Configuration */}
         {claim.status !== 'ditolak' && claim.status !== 'disetujui' && (
-          <div className="space-y-2 pt-2 border-t border-slate-100">
-            <label htmlFor="pickup-input" className="text-xs font-bold text-slate-700 block">
-              Tentukan Lokasi Pengambilan Barang
-            </label>
-            <input
+          <div className="space-y-2 border-t border-line pt-5">
+            <TextInput
               id="pickup-input"
-              type="text"
+              label="Tentukan Lokasi Pengambilan Barang"
               value={pickupLocation}
               onChange={(e) => setPickupLocation(e.target.value)}
               placeholder="Contoh: Resepsionis / Lobi Utama VINIX7"
-              className="form-input w-full text-sm"
             />
 
             {/* Quick Chips */}
             <div className="flex flex-wrap items-center gap-1.5 pt-1">
-              <span className="text-[11px] text-slate-500 mr-1">Pilihan cepat:</span>
+              <span className="mr-1 text-[11px] text-muted">Pilihan cepat:</span>
               {quickLocations.map((loc) => (
                 <button
                   key={loc}
                   type="button"
                   onClick={() => setPickupLocation(loc)}
-                  className={`text-[11px] px-2.5 py-1 rounded-md border transition-colors ${
+                  aria-pressed={pickupLocation === loc}
+                  className={[
+                    'min-h-8 rounded-control border px-2.5 text-[11px] font-medium transition-colors',
                     pickupLocation === loc
-                      ? 'bg-[#123356] text-white border-[#123356]'
-                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                  }`}
+                      ? 'border-brand bg-brand text-inverse'
+                      : 'border-line bg-surface text-body hover:border-line-strong hover:bg-surface-muted',
+                  ].join(' ')}
                 >
                   {loc}
                 </button>
               ))}
             </div>
-            <p className="text-[11px] text-slate-500 mt-1">
+            <p className="pt-1 text-xs leading-5 text-muted">
               Setelah disetujui, pemohon dapat melihat lokasi ini dan mengambil barang pada jam kerja kantor dengan menunjukkan tiket klaim.
             </p>
           </div>
@@ -136,15 +136,18 @@ export function ClaimDetailModal({
 
         {/* Approved: handover state */}
         {claim.status === 'disetujui' && (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 space-y-2 text-sm text-emerald-900">
-            <p className="font-bold">Klaim disetujui</p>
-            <p className="text-xs">
-              Lokasi pengambilan: <strong>{claim.pickup_location || DEFAULT_PICKUP_LOCATION}</strong>
+          <div className="space-y-1.5 rounded-surface border border-success/20 bg-success-soft p-4 text-[13px] leading-5 text-body">
+            <p className="font-semibold text-ink">Klaim disetujui</p>
+            <p>
+              Lokasi pengambilan:{' '}
+              <strong className="font-semibold text-ink">
+                {claim.pickup_location || DEFAULT_PICKUP_LOCATION}
+              </strong>
             </p>
             {claim.pickup_at ? (
-              <p className="text-xs">Diserahkan pada: {formatDate(claim.pickup_at)}</p>
+              <p className="text-success">Diserahkan pada: {formatDate(claim.pickup_at)}</p>
             ) : (
-              <p className="text-xs">
+              <p>
                 Barang belum diserahkan. Tandai setelah pemohon datang, identitas dicek, dan barang benar-benar diserahkan.
               </p>
             )}
@@ -152,12 +155,12 @@ export function ClaimDetailModal({
         )}
 
         {/* Action Buttons in Modal */}
-        <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-slate-100">
+        <div className="flex flex-col-reverse gap-2.5 border-t border-line pt-5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
           <Button
             variant="secondary"
-            size="md"
             onClick={onClose}
             disabled={isPending}
+            className="w-full sm:w-auto"
           >
             Tutup
           </Button>
@@ -165,12 +168,11 @@ export function ClaimDetailModal({
           {claim.status === 'ditolak' && (
             <Button
               variant="outline"
-              size="md"
               onClick={() => onReopenReview(claim.id)}
               loading={isPending}
-              className="text-sky-700 border-sky-300 hover:bg-sky-50"
+              className="w-full border-accent/30 text-accent hover:bg-accent/5 sm:w-auto"
             >
-              <RefreshCw className="w-4 h-4 mr-1.5" />
+              <RefreshCw className="size-4" aria-hidden="true" />
               Tinjau Kembali Klaim Ini
             </Button>
           )}
@@ -178,12 +180,11 @@ export function ClaimDetailModal({
           {claim.status === 'disetujui' && !claim.pickup_at && (
             <Button
               variant="primary"
-              size="md"
               onClick={() => onMarkHandedOver(claim.id)}
               loading={isMarkingHandedOver}
-              className="bg-emerald-700 hover:bg-emerald-800"
+              className="w-full sm:w-auto"
             >
-              <Check className="w-4 h-4" />
+              <Check className="size-4" aria-hidden="true" />
               Tandai Sudah Diambil
             </Button>
           )}
@@ -192,22 +193,20 @@ export function ClaimDetailModal({
             <>
               <Button
                 variant="outline"
-                size="md"
                 onClick={() => onRejectModalOpen(claim)}
                 loading={isPending}
-                className="text-rose-700 border-rose-200 hover:bg-rose-50"
+                className="w-full border-danger/30 text-danger hover:bg-danger-soft sm:w-auto"
               >
-                <X className="w-4 h-4" />
+                <X className="size-4" aria-hidden="true" />
                 Tolak Klaim
               </Button>
               <Button
                 variant="primary"
-                size="md"
                 onClick={() => onApprove(claim.id, pickupLocation)}
                 loading={isPending}
-                className="bg-emerald-700 hover:bg-emerald-800"
+                className="w-full sm:w-auto"
               >
-                <Check className="w-4 h-4" />
+                <Check className="size-4" aria-hidden="true" />
                 Setujui Klaim
               </Button>
             </>

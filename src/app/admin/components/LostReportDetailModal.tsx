@@ -25,6 +25,8 @@ export function LostReportDetailModal({
 }: LostReportDetailModalProps) {
   if (!report) return null;
 
+  const statusColor = REPORT_STATUS_COLORS[report.status];
+
   return (
     <Modal
       open={Boolean(report)}
@@ -35,24 +37,31 @@ export function LostReportDetailModal({
     >
       <div className="space-y-6">
         {/* Header / Item overview */}
-        <div className="rounded-2xl bg-slate-50 p-4 border border-slate-200/80 space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-sky-700 uppercase tracking-wider">{report.category}</span>
-            <Badge variant="outline" className={`${REPORT_STATUS_COLORS[report.status].bg} ${REPORT_STATUS_COLORS[report.status].text}`}>
+        <div className="space-y-3 rounded-surface border border-line bg-surface-muted p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
+              {report.category}
+            </span>
+            <Badge variant="outline" className={`${statusColor.bg} ${statusColor.border} ${statusColor.text}`}>
+              <span className={`size-1.5 rounded-full ${statusColor.dot}`} aria-hidden="true" />
               {REPORT_STATUS_LABELS[report.status]}
             </Badge>
           </div>
-          <h3 className="text-xl font-extrabold text-[#123356]">{report.item_title}</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-600">
-            <p><strong>Lokasi Kejadian:</strong> {report.location}</p>
-            <p><strong>Waktu Kejadian:</strong> {formatDate(report.incident_at)}</p>
+          <h3 className="text-balance text-lg font-semibold text-ink">{report.item_title}</h3>
+          <div className="grid grid-cols-1 gap-1.5 text-[13px] leading-5 text-body sm:grid-cols-2">
+            <p>
+              <strong className="font-semibold text-ink">Lokasi Kejadian:</strong> {report.location}
+            </p>
+            <p>
+              <strong className="font-semibold text-ink">Waktu Kejadian:</strong> {formatDate(report.incident_at)}
+            </p>
           </div>
         </div>
 
         {/* Public Description */}
         <div className="space-y-1.5">
-          <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Deskripsi Publik</h4>
-          <p className="text-sm text-slate-700 bg-white p-3 rounded-xl border border-slate-200 leading-relaxed">
+          <h4 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Deskripsi Publik</h4>
+          <p className="rounded-surface border border-line bg-surface p-3.5 text-[13px] leading-6 text-body">
             {report.public_description}
           </p>
         </div>
@@ -60,53 +69,59 @@ export function LostReportDetailModal({
         {/* Private Description (Secret details) */}
         <div className="space-y-1.5">
           <div className="flex items-center gap-1.5">
-            <ShieldAlert className="w-4 h-4 text-amber-600" />
-            <h4 className="text-xs font-bold text-amber-900 uppercase tracking-wider">
+            <ShieldAlert className="size-4 text-warning" aria-hidden="true" />
+            <h4 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-warning">
               Ciri Rahasia / Khusus (Kunci Verifikasi Petugas)
             </h4>
           </div>
-          <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-950 leading-relaxed font-medium">
+          <div className="rounded-surface border border-warning/20 bg-warning-soft p-3.5 text-[13px] font-medium leading-6 text-ink">
             {report.private_description || 'Pelapor tidak menyertakan ciri rahasia tambahan.'}
           </div>
         </div>
 
         {/* Blind Verification SOP Checklist for petugas */}
-        <div className="rounded-xl border border-sky-200 bg-sky-50/70 p-4 space-y-2.5">
-          <div className="flex items-center gap-2 text-sky-900 font-bold text-xs uppercase tracking-wide">
-            <ShieldCheck className="w-4 h-4 text-sky-700" />
+        <div className="space-y-3 rounded-surface border border-info/20 bg-info-soft p-4">
+          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-info">
+            <ShieldCheck className="size-4" aria-hidden="true" />
             <span>SOP Verifikasi Pemilik (Blind Verification)</span>
           </div>
-          <ul className="text-xs text-sky-950 space-y-2 pl-1">
-            <li className="flex items-start gap-2">
-              <span className="w-5 h-5 rounded-full bg-sky-200 text-sky-900 font-bold flex items-center justify-center shrink-0 text-[10px]">1</span>
-              <span><strong>Uji lisan ciri rahasia:</strong> Jangan menyebutkan ciri khusus di atas. Minta pelapor menjelaskan sendiri detail privat barangnya.</span>
+          <ul className="space-y-2.5 text-[13px] leading-5 text-body">
+            <li className="flex items-start gap-2.5">
+              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-surface text-[11px] font-semibold text-ink">
+                1
+              </span>
+              <span><strong className="font-semibold text-ink">Uji lisan ciri rahasia:</strong> Jangan menyebutkan ciri khusus di atas. Minta pelapor menjelaskan sendiri detail privat barangnya.</span>
             </li>
-            <li className="flex items-start gap-2">
-              <span className="w-5 h-5 rounded-full bg-sky-200 text-sky-900 font-bold flex items-center justify-center shrink-0 text-[10px]">2</span>
-              <span><strong>Uji akses perangkat:</strong> Jika barang berupa ponsel/laptop, minta pelapor membuka sandi/pola/biometrik di hadapan petugas.</span>
+            <li className="flex items-start gap-2.5">
+              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-surface text-[11px] font-semibold text-ink">
+                2
+              </span>
+              <span><strong className="font-semibold text-ink">Uji akses perangkat:</strong> Jika barang berupa ponsel/laptop, minta pelapor membuka sandi/pola/biometrik di hadapan petugas.</span>
             </li>
-            <li className="flex items-start gap-2">
-              <span className="w-5 h-5 rounded-full bg-sky-200 text-sky-900 font-bold flex items-center justify-center shrink-0 text-[10px]">3</span>
-              <span><strong>Periksa identitas resmi:</strong> Pastikan nama pada ID karyawan atau KTP sesuai dengan data pelapor: <em>{report.reporter?.full_name || 'Pelapor'}</em>.</span>
+            <li className="flex items-start gap-2.5">
+              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-surface text-[11px] font-semibold text-ink">
+                3
+              </span>
+              <span><strong className="font-semibold text-ink">Periksa identitas resmi:</strong> Pastikan nama pada ID karyawan atau KTP sesuai dengan data pelapor: <em>{report.reporter?.full_name || 'Pelapor'}</em>.</span>
             </li>
           </ul>
         </div>
 
         {/* Reporter Profile */}
         <div className="space-y-1.5">
-          <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Kontak Pelapor</h4>
-          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 space-y-1">
-            <p><strong>Nama:</strong> {report.reporter?.full_name || 'Pengguna'}</p>
-            {report.reporter?.employee_id && <p><strong>ID Karyawan:</strong> {report.reporter.employee_id}</p>}
-            {report.reporter?.department && <p><strong>Departemen:</strong> {report.reporter.department}</p>}
+          <h4 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Kontak Pelapor</h4>
+          <div className="space-y-1 rounded-surface border border-line bg-surface-muted p-3.5 text-[13px] leading-5 text-body">
+            <p><strong className="font-semibold text-ink">Nama:</strong> {report.reporter?.full_name || 'Pengguna'}</p>
+            {report.reporter?.employee_id && <p><strong className="font-semibold text-ink">ID Karyawan:</strong> {report.reporter.employee_id}</p>}
+            {report.reporter?.department && <p><strong className="font-semibold text-ink">Departemen:</strong> {report.reporter.department}</p>}
             {report.contact_phone && (
               <p>
-                <strong>No. HP / WhatsApp:</strong>{' '}
+                <strong className="font-semibold text-ink">No. HP / WhatsApp:</strong>{' '}
                 <a
                   href={`https://wa.me/${report.contact_phone.replace(/^0/, '62').replace(/[^0-9]/g, '')}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-emerald-700 font-semibold hover:underline"
+                  className="font-semibold text-accent hover:text-brand hover:underline"
                 >
                   {report.contact_phone}
                 </a>
@@ -116,17 +131,16 @@ export function LostReportDetailModal({
         </div>
 
         {/* Actions in modal */}
-        <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-slate-100">
-          <Button variant="secondary" onClick={onClose}>
+        <div className="flex flex-col-reverse gap-2.5 border-t border-line pt-5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+          <Button variant="secondary" onClick={onClose} className="w-full sm:w-auto">
             Tutup
           </Button>
           {report.status === 'aktif' && (
             <Button
-              variant="primary"
               onClick={() => onOpenMarkFound(report)}
-              className="bg-sky-700 hover:bg-sky-800"
+              className="w-full sm:w-auto"
             >
-              <CheckCircle2 className="w-4 h-4" />
+              <CheckCircle2 className="size-4" aria-hidden="true" />
               Tandai Barang Ditemukan
             </Button>
           )}
@@ -137,19 +151,18 @@ export function LostReportDetailModal({
                   href={getWhatsAppVerificationUrl(report) || '#'}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-colors min-h-[44px]"
+                  className="btn-secondary w-full sm:w-auto"
                 >
-                  <MessageCircle className="w-4 h-4" />
+                  <MessageCircle className="size-4" aria-hidden="true" />
                   Hubungi Pelapor via WA
                 </a>
               )}
               <Button
-                variant="primary"
                 onClick={() => onOpenCompleteHandover(report)}
-                className="bg-emerald-700 hover:bg-emerald-800"
+                className="w-full sm:w-auto"
               >
-                <Check className="w-4 h-4" />
-                Verifikasi Selesai & Serahkan
+                <Check className="size-4" aria-hidden="true" />
+                Verifikasi Selesai &amp; Serahkan
               </Button>
             </>
           )}

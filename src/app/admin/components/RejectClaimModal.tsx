@@ -5,6 +5,7 @@ import { X } from 'lucide-react';
 import type { Claim } from '@/types/claims';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
+import { TextArea } from '@/components/ui/Field';
 
 interface RejectClaimModalProps {
   claim: Claim | null;
@@ -34,29 +35,25 @@ export function RejectClaimModal({
       size="md"
     >
       <div className="space-y-4">
-        <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900 leading-relaxed">
+        <div className="rounded-surface border border-warning/20 bg-warning-soft p-3.5 text-[13px] leading-5 text-body">
           Penolakan klaim akan mencatat status ditolak di linimasa pemohon. Anda tetap dapat memulihkan status ke &quot;Ditinjau&quot; jika terjadi salah klik atau pemohon membawa bukti baru.
         </div>
 
-        <div>
-          <label htmlFor="reject-reason" className="text-xs font-bold text-slate-700 block mb-1">
-            Alasan Penolakan
-          </label>
-          <textarea
-            id="reject-reason"
-            rows={3}
-            value={rejectReason}
-            onChange={(e) => setRejectReason(e.target.value)}
-            placeholder="Tuliskan alasan penolakan agar tercatat di audit linimasa..."
-            className="form-input w-full text-xs sm:text-sm"
-          />
-        </div>
+        <TextArea
+          id="reject-reason"
+          label="Alasan Penolakan"
+          rows={3}
+          value={rejectReason}
+          onChange={(e) => setRejectReason(e.target.value)}
+          placeholder="Tuliskan alasan penolakan agar tercatat di audit linimasa..."
+        />
 
-        <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+        <div className="flex flex-col-reverse gap-2.5 border-t border-line pt-4 sm:flex-row sm:justify-end">
           <Button
             variant="secondary"
             onClick={onClose}
             disabled={isPending}
+            className="w-full sm:w-auto"
           >
             Batal
           </Button>
@@ -64,9 +61,9 @@ export function RejectClaimModal({
             variant="outline"
             onClick={() => onConfirm(claim, rejectReason.trim())}
             loading={isPending}
-            className="bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100"
+            className="w-full border-danger/30 text-danger hover:bg-danger-soft sm:w-auto"
           >
-            <X className="w-4 h-4 mr-1" />
+            {!isPending && <X className="size-4" aria-hidden="true" />}
             Konfirmasi Tolak Klaim
           </Button>
         </div>

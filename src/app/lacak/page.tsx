@@ -8,6 +8,8 @@ import QRCode from 'react-qr-code';
 import { formatDate } from '@/lib/date';
 import { fetchLatestUserReport, type ReportEventRow, type UserReportRow, type ClaimRow, type ClaimItemRow } from '@/lib/supabase/reports';
 import { DEFAULT_PICKUP_LOCATION, OFFICE_ADDRESS, PICKUP_INSTRUCTIONS } from '@/lib/locations';
+import { REPORT_STATUS_COLORS, STATUS_COLORS } from '@/types/claims';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 const CLAIM_STEPS = ['Klaim diajukan', 'Verifikasi petugas', 'Klaim disetujui', 'Barang diambil'];
 const CLAIM_STATUS_LABELS: Record<ClaimRow['status'], string> = {
@@ -16,7 +18,7 @@ const CLAIM_STATUS_LABELS: Record<ClaimRow['status'], string> = {
   disetujui: 'Disetujui',
   ditolak: 'Ditolak',
 };
-const CONTACT_EMAIL = 'mailto:lostfound@vinixsevenaurum.co.id';
+const CONTACT_EMAIL = 'mailto:lostfound@vinix7.id';
 
 function getReportProgress(report: Pick<UserReportRow, 'type' | 'status'>, claim?: ClaimRow | null) {
   const isFoundReport = report.type === 'temuan';
@@ -147,7 +149,7 @@ function TrackingStepper({
   isStopped: boolean;
 }) {
   return (
-    <ol aria-label={label} className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-2">
+    <ol aria-label={label} className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-2">
       {steps.map((step, index) => {
         const isCurrent = index === statusIndex;
         const isComplete = index < statusIndex || (isCurrent && isFinished);
@@ -158,17 +160,27 @@ function TrackingStepper({
           <li key={step} aria-current={isCurrent ? 'step' : undefined} className="flex items-center gap-3 sm:flex-1 sm:flex-col sm:gap-2 sm:text-center">
             <span
               aria-hidden="true"
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+              className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
                 isStopStep
-                  ? 'bg-rose-600 text-white'
+                  ? 'bg-danger text-inverse'
                   : isFilled
-                  ? 'bg-[#123356] text-white'
-                  : 'border-2 border-slate-500 bg-white text-slate-600'
+                  ? 'bg-brand text-inverse'
+                  : 'border border-line-strong bg-surface text-muted'
               }`}
             >
-              {isComplete ? <Check className="h-4 w-4" /> : index + 1}
+              {isComplete ? <Check className="size-4" /> : index + 1}
             </span>
-            <span className={`text-xs ${isStopStep ? 'font-bold text-rose-700' : isCurrent ? 'font-bold text-[#123356]' : 'text-slate-600'}`}>
+            <span
+              className={`text-xs leading-5 ${
+                isStopStep
+                  ? 'font-semibold text-danger'
+                  : isCurrent
+                  ? 'font-semibold text-ink'
+                  : isComplete
+                  ? 'text-body'
+                  : 'text-muted'
+              }`}
+            >
               {step}
               <span className="sr-only">
                 {isStopStep ? ', ditolak' : isComplete ? ', selesai' : isCurrent ? ', tahap saat ini' : ', belum dimulai'}
@@ -183,15 +195,18 @@ function TrackingStepper({
 
 function ActivityTimeline({ events }: { events: ReportEventRow[] }) {
   return (
-    <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+    <div className="relative space-y-6 pl-5 before:absolute before:bottom-2 before:left-[3px] before:top-2 before:w-px before:bg-line">
       {events.map((event) => (
         <div key={event.id} className="relative">
-          <div className="absolute -left-6 top-1 w-3.5 h-3.5 rounded-full border-2 border-[#123356] bg-[#123356]" />
-          <div className="flex items-center justify-between gap-2">
-            <h4 className="text-sm font-bold text-slate-900">{event.title}</h4>
-            <span className="text-[11px] text-slate-400 shrink-0">{formatDate(event.created_at)}</span>
+          <span
+            aria-hidden="true"
+            className="absolute -left-5 top-1.5 size-2 rounded-full bg-brand ring-4 ring-surface"
+          />
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+            <h4 className="text-sm font-semibold text-ink">{event.title}</h4>
+            <span className="shrink-0 text-xs tabular-nums text-muted">{formatDate(event.created_at)}</span>
           </div>
-          <p className="text-xs text-slate-500 mt-1 leading-relaxed">{event.description}</p>
+          <p className="mt-1 text-pretty text-[13px] leading-5 text-body">{event.description}</p>
         </div>
       ))}
     </div>
@@ -235,17 +250,17 @@ function TrackingContent() {
       .finally(() => setIsLoading(false));
   }, [router, requestedReportId, requestedTicket]);
 
-  if (isLoading) return <div className="max-w-7xl mx-auto px-4 py-16 text-center text-slate-500">Memuat status laporan...</div>;
-  if (error) return <div role="alert" className="max-w-7xl mx-auto px-4 py-16 text-center text-rose-700">{error}</div>;
+  if (isLoading) return <div className="mx-auto max-w-6xl px-4 py-16 text-center text-sm text-muted">Memuat status laporan...</div>;
+  if (error) return <div role="alert" className="mx-auto max-w-6xl px-4 py-16 text-center text-sm text-danger">{error}</div>;
 
   if (!report) {
     if (!claim) return (
-      <div className="max-w-2xl mx-auto px-4 py-16 text-center space-y-4">
-        <h1 className="text-2xl font-extrabold text-[#123356]">Belum ada laporan atau klaim</h1>
-        <p className="text-sm text-slate-500">Buat laporan atau ajukan klaim kepemilikan untuk melihat proses penanganannya di sini.</p>
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          <Link href="/lapor" className="btn-primary inline-flex text-xs">Buat Laporan</Link>
-          <Link href="/cari" className="btn-secondary inline-flex text-xs">Cari Barang Temuan</Link>
+      <div className="mx-auto max-w-2xl space-y-4 px-4 py-16 text-center">
+        <h1 className="text-balance text-2xl font-semibold text-ink">Belum ada laporan atau klaim</h1>
+        <p className="text-pretty text-sm leading-6 text-body">Buat laporan atau ajukan klaim kepemilikan untuk melihat proses penanganannya di sini.</p>
+        <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+          <Link href="/lapor" className="btn-primary inline-flex">Buat Laporan</Link>
+          <Link href="/cari" className="btn-secondary inline-flex">Cari Barang Temuan</Link>
         </div>
       </div>
     );
@@ -253,133 +268,156 @@ function TrackingContent() {
     const { statusIndex, statusLabel, description, isApproved, isRejected, isHandedOver } = getClaimProgress(claim);
     const timeline = getClaimTimeline(claim);
     const panelTone = isRejected
-      ? 'bg-rose-50/80 border-rose-200'
+      ? 'bg-danger-soft border-danger/20'
       : isApproved
-      ? 'bg-emerald-50/80 border-emerald-200'
-      : 'bg-sky-50/80 border-sky-200';
-    const titleTone = isRejected ? 'text-rose-900' : isApproved ? 'text-emerald-900' : 'text-sky-900';
-    const bodyTone = isRejected ? 'text-rose-700' : isApproved ? 'text-emerald-700' : 'text-sky-700';
-    const iconTone = isRejected ? 'text-rose-600' : isApproved ? 'text-emerald-600' : 'text-sky-600';
-    const pillTone = isRejected ? 'bg-rose-100 text-rose-800' : isApproved ? 'bg-emerald-100 text-emerald-800' : 'bg-sky-100 text-sky-800';
+      ? 'bg-success-soft border-success/20'
+      : 'bg-info-soft border-info/20';
+    const titleTone = isRejected ? 'text-danger' : isApproved ? 'text-success' : 'text-info';
+    const pillTone = isRejected
+      ? `${STATUS_COLORS.ditolak.bg} ${STATUS_COLORS.ditolak.text} ${STATUS_COLORS.ditolak.border}`
+      : isApproved
+      ? `${STATUS_COLORS.disetujui.bg} ${STATUS_COLORS.disetujui.text} ${STATUS_COLORS.disetujui.border}`
+      : `${STATUS_COLORS.diajukan.bg} ${STATUS_COLORS.diajukan.text} ${STATUS_COLORS.diajukan.border}`;
 
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#123356]">Lacak Klaim Barang Temuan</h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1">{isClaimOwner ? 'Status tiket pengambilan barang temuanmu tercatat di sini.' : 'Status klaim pada barang temuan yang kamu laporkan.'}</p>
-          </div>
-          {claims.length > 1 && (
-            <label className="text-xs text-slate-600 flex flex-wrap items-center gap-2">
-              Pilih tiket
-              <select
-                value={claim.ticket_code}
-                onChange={(event) => router.push(`/lacak?ticket=${event.target.value}`)}
-                className="form-input ml-2 py-1.5 text-sm max-w-full min-w-0"
-              >
-                {claims.map((item) => (
-                  <option key={item.id} value={item.ticket_code}>
-                    {item.ticket_code} · {item.item?.title || 'Barang temuan'}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-          <a href={CONTACT_EMAIL} className="btn-secondary text-xs flex items-center gap-2 self-start sm:self-auto">
-            <MessageSquare className="w-4 h-4 text-slate-600" />
-            <span>Hubungi Petugas</span>
-          </a>
-        </div>
+      <div className="mx-auto max-w-6xl space-y-8 px-4 py-10 sm:px-6 lg:px-8">
+        <PageHeader
+          title="Lacak Klaim Barang Temuan"
+          description={isClaimOwner ? 'Status tiket pengambilan barang temuanmu tercatat di sini.' : 'Status klaim pada barang temuan yang kamu laporkan.'}
+          actions={
+            <>
+              {claims.length > 1 && (
+                <label className="flex w-full flex-col gap-1 text-xs text-muted sm:w-72">
+                  Pilih tiket
+                  <select
+                    value={claim.ticket_code}
+                    onChange={(event) => router.push(`/lacak?ticket=${event.target.value}`)}
+                    className="form-input min-h-11 w-full min-w-0 py-2 text-sm"
+                  >
+                    {claims.map((item) => (
+                      <option key={item.id} value={item.ticket_code}>
+                        {item.ticket_code} · {item.item?.title || 'Barang temuan'}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              <a href={CONTACT_EMAIL} className="btn-secondary">
+                <MessageSquare className="size-4" aria-hidden="true" />
+                <span>Hubungi Petugas</span>
+              </a>
+            </>
+          }
+        />
 
-        <div className="apple-card p-6 sm:p-8 space-y-8 bg-white">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-6 border-b border-slate-100">
-            <div>
-              <h2 className="text-2xl font-extrabold text-[#123356]">{claimItem?.title || claim.item?.title || 'Barang temuan'}</h2>
-              <p className="text-xs text-slate-500 mt-0.5">Tiket pengambilan · {claim.ticket_code}</p>
+        <div className="space-y-8 rounded-card border border-line bg-surface p-5 sm:p-8">
+          <div className="flex flex-col justify-between gap-3 border-b border-line pb-5 sm:flex-row sm:items-center">
+            <div className="min-w-0">
+              <h2 className="text-balance text-xl font-semibold leading-7 text-ink">{claimItem?.title || claim.item?.title || 'Barang temuan'}</h2>
+              <p className="mt-1 text-[13px] text-muted">
+                Tiket pengambilan · <span className="tabular-nums">{claim.ticket_code}</span>
+              </p>
             </div>
-            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider inline-block ${pillTone}`}>SAAT INI · {statusLabel}</span>
+            <span className={`inline-flex w-fit items-center gap-1.5 rounded-pill border px-2.5 py-1 text-xs font-semibold ${pillTone}`}>
+              <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
+              SAAT INI · {statusLabel}
+            </span>
           </div>
 
           <TrackingStepper label="Tahapan klaim" steps={CLAIM_STEPS} statusIndex={statusIndex} isFinished={isHandedOver} isStopped={isRejected} />
 
-          <div className={`p-4 sm:p-5 rounded-2xl border space-y-4 ${panelTone}`}>
-            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+          <div className={`space-y-4 rounded-surface border p-4 sm:p-5 ${panelTone}`}>
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
               <div className="flex items-start gap-3">
-                {isRejected ? <XCircle className={`w-6 h-6 shrink-0 ${iconTone}`} /> : isHandedOver ? <CheckCircle2 className={`w-6 h-6 shrink-0 ${iconTone}`} /> : <Clock className={`w-6 h-6 shrink-0 ${iconTone}`} />}
+                {isRejected ? (
+                  <XCircle className={`mt-0.5 size-5 shrink-0 ${titleTone}`} aria-hidden="true" />
+                ) : isHandedOver ? (
+                  <CheckCircle2 className={`mt-0.5 size-5 shrink-0 ${titleTone}`} aria-hidden="true" />
+                ) : (
+                  <Clock className={`mt-0.5 size-5 shrink-0 ${titleTone}`} aria-hidden="true" />
+                )}
                 <div>
-                  <h3 className={`text-sm font-bold ${titleTone}`}>Status klaim: {statusLabel}</h3>
-                  <p className={`text-xs mt-0.5 ${bodyTone}`}>{description}</p>
-                  {claim.pickup_location && <p className={`text-xs mt-1 font-semibold ${bodyTone}`}>Lokasi pengambilan: {claim.pickup_location}</p>}
+                  <h3 className={`text-sm font-semibold ${titleTone}`}>Status klaim: {statusLabel}</h3>
+                  <p className="mt-1 text-pretty text-[13px] leading-5 text-body">{description}</p>
+                  {claim.pickup_location && (
+                    <p className="mt-1 text-[13px] font-medium text-body">Lokasi pengambilan: {claim.pickup_location}</p>
+                  )}
                 </div>
               </div>
               {isApproved && !isHandedOver && isClaimOwner && (
-                <div className="rounded-xl border border-slate-200 bg-white p-3 shrink-0">
+                <div className="shrink-0 rounded-surface border border-line bg-surface p-3">
                   <QRCode value={claim.ticket_code} size={112} />
-                  <p className="mt-2 text-center text-[10px] font-semibold text-slate-500">Tunjukkan saat pengambilan</p>
+                  <p className="mt-2 text-center text-xs font-medium text-muted">Tunjukkan saat pengambilan</p>
                 </div>
               )}
             </div>
 
             {isApproved && !isHandedOver && (
-              <div className="rounded-xl border border-emerald-200 bg-white px-4 py-3 space-y-1">
-                <p className="text-xs font-bold text-emerald-900">Ambil pada jam kerja kantor</p>
-                <p className="text-xs text-emerald-800 leading-relaxed">{PICKUP_INSTRUCTIONS}</p>
+              <div className="space-y-1 rounded-surface border border-success/20 bg-surface px-4 py-3">
+                <p className="text-[13px] font-semibold text-success">Ambil pada jam kerja kantor</p>
+                <p className="text-pretty text-[13px] leading-5 text-body">{PICKUP_INSTRUCTIONS}</p>
               </div>
             )}
 
             {isRejected && (
-              <a href={CONTACT_EMAIL} className="btn-secondary text-xs inline-flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-slate-600" />
+              <a href={CONTACT_EMAIL} className="btn-secondary">
+                <MessageSquare className="size-4" aria-hidden="true" />
                 <span>Email Petugas</span>
               </a>
             )}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          <div className="lg:col-span-8 apple-card p-6 sm:p-8 space-y-6">
-            <h3 className="text-base font-bold text-[#123356] pb-3 border-b border-slate-100">Riwayat Aktivitas</h3>
+        <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
+          <div className="space-y-6 rounded-card border border-line bg-surface p-5 sm:p-8 lg:col-span-8">
+            <h3 className="border-b border-line pb-3 text-base font-semibold text-ink">Riwayat Aktivitas</h3>
             <ActivityTimeline events={timeline} />
           </div>
 
-          <div className="lg:col-span-4 apple-card p-6 space-y-5">
-            <h3 className="text-base font-bold text-[#123356] pb-3 border-b border-slate-100">Informasi Klaim</h3>
-            <div className="space-y-4 text-xs">
+          <div className="space-y-5 rounded-card border border-line bg-surface p-5 sm:p-6 lg:col-span-4">
+            <h3 className="border-b border-line pb-3 text-base font-semibold text-ink">Informasi Klaim</h3>
+            <dl className="space-y-4 text-[13px]">
               <div>
-                <span className="text-slate-400 block">Nomor Tiket</span>
-                <span className="font-bold text-slate-800 inline-flex items-center gap-1.5"><Ticket className="w-3.5 h-3.5 text-slate-400" />{claim.ticket_code}</span>
+                <dt className="text-xs text-muted">Nomor Tiket</dt>
+                <dd className="mt-0.5 inline-flex items-center gap-1.5 font-semibold tabular-nums text-ink">
+                  <Ticket className="size-3.5 text-muted" aria-hidden="true" />
+                  {claim.ticket_code}
+                </dd>
               </div>
               <div>
-                <span className="text-slate-400 block">Lokasi Penemuan</span>
-                <span className="font-bold text-slate-800 inline-flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-slate-400" />{claimItem?.location || claim.item?.location || '-'}</span>
+                <dt className="text-xs text-muted">Lokasi Penemuan</dt>
+                <dd className="mt-0.5 inline-flex items-center gap-1.5 font-semibold text-ink">
+                  <MapPin className="size-3.5 text-muted" aria-hidden="true" />
+                  {claimItem?.location || claim.item?.location || '-'}
+                </dd>
               </div>
               <div>
-                <span className="text-slate-400 block">Diajukan</span>
-                <span className="font-bold text-slate-800">{formatDate(claim.created_at)}</span>
+                <dt className="text-xs text-muted">Diajukan</dt>
+                <dd className="mt-0.5 font-semibold tabular-nums text-ink">{formatDate(claim.created_at)}</dd>
               </div>
               <div>
-                <span className="text-slate-400 block">Status</span>
-                <span className="font-bold text-slate-800">{statusLabel}</span>
+                <dt className="text-xs text-muted">Status</dt>
+                <dd className="mt-0.5 font-semibold text-ink">{statusLabel}</dd>
               </div>
               {claim.approved_at && (
                 <div>
-                  <span className="text-slate-400 block">Disetujui</span>
-                  <span className="font-bold text-slate-800">{formatDate(claim.approved_at)}</span>
+                  <dt className="text-xs text-muted">Disetujui</dt>
+                  <dd className="mt-0.5 font-semibold tabular-nums text-ink">{formatDate(claim.approved_at)}</dd>
                 </div>
               )}
               {claim.pickup_at && (
                 <div>
-                  <span className="text-slate-400 block">Diambil</span>
-                  <span className="font-bold text-slate-800">{formatDate(claim.pickup_at)}</span>
+                  <dt className="text-xs text-muted">Diambil</dt>
+                  <dd className="mt-0.5 font-semibold tabular-nums text-ink">{formatDate(claim.pickup_at)}</dd>
                 </div>
               )}
               {claim.pickup_location && (
                 <div>
-                  <span className="text-slate-400 block">Lokasi Pengambilan</span>
-                  <span className="font-bold text-slate-800">{claim.pickup_location}</span>
+                  <dt className="text-xs text-muted">Lokasi Pengambilan</dt>
+                  <dd className="mt-0.5 font-semibold text-ink">{claim.pickup_location}</dd>
                 </div>
               )}
-            </div>
+            </dl>
           </div>
         </div>
       </div>
@@ -389,29 +427,64 @@ function TrackingContent() {
   const { steps, statusIndex, statusLabel, description } = getReportProgress(report, claim);
   const timeline = events.length > 0 ? events : [{ id: report.id, title: 'Laporan dibuat', description: 'Laporan berhasil diterima sistem.', created_at: report.created_at }];
   const shouldVisitPost = report.type === 'hilang' && report.status === 'ditemukan';
+  const reportTone = REPORT_STATUS_COLORS[report.status];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 gap-4">
-        <div><h1 className="text-2xl sm:text-3xl font-extrabold text-[#123356]">Lacak Laporan {report.type === 'temuan' ? 'Temuan' : 'Kehilangan'}</h1><p className="text-xs sm:text-sm text-slate-500 mt-1">Pembaruan laporanmu tercatat di sini.</p></div>
-        {reports.length > 1 && <label className="text-xs text-slate-600 flex flex-wrap items-center gap-2">Pilih laporan<select value={report?.id || ''} onChange={(event) => router.push(`/lacak?report=${event.target.value}`)} className="form-input ml-2 py-1.5 text-sm max-w-full min-w-0">{<option value="" disabled>Pilih laporan</option>}{reports.map((item) => <option key={item.id} value={item.id}>{item.report_code} · {item.item_title}</option>)}</select></label>}
+    <div className="mx-auto max-w-6xl space-y-8 px-4 py-10 sm:px-6 lg:px-8">
+      <PageHeader
+        title={`Lacak Laporan ${report.type === 'temuan' ? 'Temuan' : 'Kehilangan'}`}
+        description="Pembaruan laporanmu tercatat di sini."
+        actions={
+          <>
+            {reports.length > 1 && (
+              <label className="flex w-full flex-col gap-1 text-xs text-muted sm:w-72">
+                Pilih laporan
+                <select
+                  value={report?.id || ''}
+                  onChange={(event) => router.push(`/lacak?report=${event.target.value}`)}
+                  className="form-input min-h-11 w-full min-w-0 py-2 text-sm"
+                >
+                  <option value="" disabled>Pilih laporan</option>
+                  {reports.map((item) => (
+                    <option key={item.id} value={item.id}>{item.report_code} · {item.item_title}</option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <a href={CONTACT_EMAIL} className="btn-secondary">
+              <MessageSquare className="size-4" aria-hidden="true" />
+              <span>Hubungi Petugas</span>
+            </a>
+          </>
+        }
+      />
 
-        <a href={CONTACT_EMAIL} className="btn-secondary text-xs flex items-center gap-2 self-start sm:self-auto"><MessageSquare className="w-4 h-4 text-slate-600" /><span>Hubungi Petugas</span></a>
-      </div>
+      <div className="space-y-8 rounded-card border border-line bg-surface p-5 sm:p-8">
+        <div className="flex flex-col justify-between gap-3 border-b border-line pb-5 sm:flex-row sm:items-center">
+          <div className="min-w-0">
+            <h2 className="text-balance text-xl font-semibold leading-7 text-ink">{report.item_title}</h2>
+            <p className="mt-1 text-[13px] text-muted">
+              Nomor laporan · <span className="tabular-nums">{report.report_code}</span>
+            </p>
+          </div>
+          <span className={`inline-flex w-fit items-center gap-1.5 rounded-pill border px-2.5 py-1 text-xs font-semibold ${reportTone.bg} ${reportTone.text} ${reportTone.border}`}>
+            <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
+            SAAT INI · {statusLabel}
+          </span>
+        </div>
 
-      <div className="apple-card p-6 sm:p-8 space-y-8 bg-white">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-6 border-b border-slate-100"><div><h2 className="text-2xl font-extrabold text-[#123356]">{report.item_title}</h2><p className="text-xs text-slate-500 mt-0.5">Nomor laporan · {report.report_code}</p></div><span className="px-3 py-1 rounded-full text-xs font-bold bg-sky-100 text-sky-800 uppercase tracking-wider inline-block">SAAT INI · {statusLabel}</span></div>
         <TrackingStepper label="Tahapan laporan" steps={steps} statusIndex={statusIndex} isFinished={report.status === 'selesai'} isStopped={false} />
-        <div className="p-4 sm:p-5 rounded-2xl bg-sky-50/80 border border-sky-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-start sm:items-center gap-3">
-            <CheckCircle2 className="w-6 h-6 text-sky-600 shrink-0" />
+
+        <div className={`flex flex-col justify-between gap-4 rounded-surface border p-4 sm:flex-row sm:items-center sm:p-5 ${reportTone.bg} ${reportTone.border}`}>
+          <div className="flex items-start gap-3 sm:items-center">
+            <CheckCircle2 className={`mt-0.5 size-5 shrink-0 sm:mt-0 ${reportTone.text}`} aria-hidden="true" />
             <div>
-              <h3 className="text-sm font-bold text-sky-900">Status laporan: {statusLabel}</h3>
-              <p className="text-xs text-sky-700 mt-0.5">{description}</p>
+              <h3 className={`text-sm font-semibold ${reportTone.text}`}>Status laporan: {statusLabel}</h3>
+              <p className="mt-1 text-pretty text-[13px] leading-5 text-body">{description}</p>
               {claim && (
-                <p className="text-xs text-sky-700 mt-1">
-                  Status klaim: {CLAIM_STATUS_LABELS[claim.status]} · Tiket pengambilan: {claim.ticket_code}{' '}
-                  <Link href={`/lacak?ticket=${claim.ticket_code}`} className="font-bold underline underline-offset-2 hover:text-sky-900">
+                <p className="mt-1 text-[13px] leading-5 text-body">
+                  Status klaim: {CLAIM_STATUS_LABELS[claim.status]} · Tiket pengambilan: <span className="tabular-nums">{claim.ticket_code}</span>{' '}
+                  <Link href={`/lacak?ticket=${claim.ticket_code}`} className="font-semibold text-accent underline decoration-accent/40 underline-offset-2 transition-colors hover:text-brand">
                     Lihat tiket
                   </Link>
                 </p>
@@ -419,29 +492,38 @@ function TrackingContent() {
             </div>
           </div>
           {shouldVisitPost && (
-            <div className="rounded-xl border border-sky-300 bg-white/80 px-4 py-3 space-y-1 sm:max-w-xs shrink-0">
-              <p className="text-sm font-bold text-sky-900">Datang ke {DEFAULT_PICKUP_LOCATION}</p>
-              <p className="text-xs text-sky-800 leading-relaxed">Lokasi kantor: {OFFICE_ADDRESS}. Bawa ID card/KTP dan sebutkan ciri khusus barang untuk verifikasi serah terima.</p>
-              <Link href="/bantuan" className="text-xs font-bold text-sky-800 hover:text-sky-900 inline-flex items-center gap-1.5">
-                Panduan pengambilan <ArrowRight className="w-3.5 h-3.5" />
+            <div className="shrink-0 space-y-1 rounded-surface border border-line bg-surface px-4 py-3 sm:max-w-xs">
+              <p className="text-sm font-semibold text-ink">Datang ke {DEFAULT_PICKUP_LOCATION}</p>
+              <p className="text-pretty text-[13px] leading-5 text-body">Lokasi kantor: {OFFICE_ADDRESS}. Bawa ID card/KTP dan sebutkan ciri khusus barang untuk verifikasi serah terima.</p>
+              <Link href="/bantuan" className="inline-flex min-h-9 items-center gap-1.5 text-[13px] font-semibold text-accent transition-colors hover:text-brand">
+                Panduan pengambilan <ArrowRight className="size-3.5" aria-hidden="true" />
               </Link>
             </div>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        <div className="lg:col-span-8 apple-card p-6 sm:p-8 space-y-6">
-          <h3 className="text-base font-bold text-[#123356] pb-3 border-b border-slate-100">Riwayat Aktivitas</h3>
+      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
+        <div className="space-y-6 rounded-card border border-line bg-surface p-5 sm:p-8 lg:col-span-8">
+          <h3 className="border-b border-line pb-3 text-base font-semibold text-ink">Riwayat Aktivitas</h3>
           <ActivityTimeline events={timeline} />
         </div>
-        <div className="lg:col-span-4 apple-card p-6 space-y-5">
-          <h3 className="text-base font-bold text-[#123356] pb-3 border-b border-slate-100">Informasi Laporan</h3>
-          <div className="space-y-4 text-xs">
-            <div><span className="text-slate-400 block">Lokasi Kejadian</span><span className="font-bold text-slate-800 text-sm">{report.location}</span></div>
-            <div><span className="text-slate-400 block">Dilaporkan</span><span className="font-bold text-slate-800">{formatDate(report.created_at)}</span></div>
-            <div><span className="text-slate-400 block">Kategori</span><span className="font-bold text-slate-800">{report.category}</span></div>
-          </div>
+        <div className="space-y-5 rounded-card border border-line bg-surface p-5 sm:p-6 lg:col-span-4">
+          <h3 className="border-b border-line pb-3 text-base font-semibold text-ink">Informasi Laporan</h3>
+          <dl className="space-y-4 text-[13px]">
+            <div>
+              <dt className="text-xs text-muted">Lokasi Kejadian</dt>
+              <dd className="mt-0.5 text-sm font-semibold text-ink">{report.location}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted">Dilaporkan</dt>
+              <dd className="mt-0.5 font-semibold tabular-nums text-ink">{formatDate(report.created_at)}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted">Kategori</dt>
+              <dd className="mt-0.5 font-semibold text-ink">{report.category}</dd>
+            </div>
+          </dl>
         </div>
       </div>
     </div>
@@ -449,5 +531,15 @@ function TrackingContent() {
 }
 
 export default function TrackingPage() {
-  return <Suspense fallback={<div className="max-w-7xl mx-auto px-4 py-16 text-center text-slate-500">Memuat status laporan...</div>}><TrackingContent /></Suspense>;
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-6xl px-4 py-16 text-center text-sm text-muted">
+          Memuat status laporan...
+        </div>
+      }
+    >
+      <TrackingContent />
+    </Suspense>
+  );
 }

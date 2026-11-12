@@ -68,18 +68,18 @@ NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
 SUPABASE_URL=https://YOUR_PROJECT.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY
-NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS=vinixsevenaurum.co.id
+NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS=vinix7.id
 ```
 
 `NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS` menerima beberapa domain yang dipisahkan koma, tanpa `@`. Service role key hanya dipakai di server (notifikasi dan tugas admin), jangan pernah diekspos ke browser.
 
 ### 3. Siapkan Supabase
 
-Pada proyek Supabase baru, jalankan [supabase/schema.sql](supabase/schema.sql) melalui SQL Editor. Skrip ini membuat tabel, aturan akses, trigger, serta bucket foto publik `item-images`.
+Pada proyek Supabase baru, jalankan [supabase/schema.sql](supabase/schema.sql) melalui SQL Editor. Skrip ini membuat tabel, aturan akses, trigger, serta bucket foto publik `item-images` dan bucket privat `item-originals` untuk foto asli yang hanya dibaca petugas.
 
 Untuk proyek yang sudah berjalan, jalankan [supabase/hardening.sql](supabase/hardening.sql) setelah `schema.sql`. Patch ini menyelaraskan trigger klaim, aturan baca katalog, dan kebijakan klaim. Aman dijalankan berulang.
 
-[supabase/catalog-policy.sql](supabase/catalog-policy.sql) hanya diperlukan untuk instalasi lama yang katalognya belum bisa dibaca publik. Instalasi baru tidak memerlukannya.
+Jalankan [supabase/auth-domain-guard.sql](supabase/auth-domain-guard.sql) untuk menegakkan pembatasan domain email di sisi server (mencegah pendaftaran langsung lewat Supabase Auth dengan domain di luar daftar). Sesuaikan daftar domain di skrip agar sama dengan `NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS`.
 
 Gunakan provider Email untuk pendaftaran dan login email/password. Login Google tidak dipakai. Pengaturan **Confirm email** menentukan apakah pengguna harus mengonfirmasi email sebelum masuk.
 

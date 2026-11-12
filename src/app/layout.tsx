@@ -37,9 +37,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="id">
-      <body className="min-h-screen flex flex-col bg-[#f5f5f7] text-[#1d1d1f] antialiased selection:bg-sky-500 selection:text-white touch-manipulation">
+      <body className="min-h-screen flex flex-col bg-background text-ink antialiased selection:bg-brand selection:text-inverse touch-manipulation">
         <QueryProvider>
-          <Suspense fallback={<div className="h-16 bg-white/80" />}>
+          <Suspense fallback={<div className="h-14 bg-surface sm:h-16" />}>
             <Navbar />
           </Suspense>
           <main className="flex-1 w-full">

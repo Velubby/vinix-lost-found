@@ -45,29 +45,29 @@ export function Modal({
       <DialogPortal>
         <DialogOverlay className="fixed inset-0 bg-black/40 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 z-50" />
         <DialogContent className={cn(
-          'fixed left-[50%] top-[50%] z-50 w-[calc(100%-2rem)] max-h-[90vh] overflow-y-auto translate-x-[-50%] translate-y-[-50%] bg-white rounded-2xl shadow-xl p-6',
+          'fixed left-[50%] top-[50%] z-50 w-[calc(100%-2rem)] max-h-[90dvh] overflow-y-auto translate-x-[-50%] translate-y-[-50%] bg-surface rounded-card shadow-overlay p-6',
           'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]',
           sizes[size]
         )}>
-          <div className="flex flex-col gap-2 pb-4 border-b border-slate-100">
+          <div className="flex flex-col gap-2 pb-4 border-b border-line">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <DialogTitle className="text-xl font-extrabold text-[#123356]">{title}</DialogTitle>
-                {description && <DialogDescription className="mt-1 text-sm text-slate-500">{description}</DialogDescription>}
+                <DialogTitle className="text-xl font-semibold text-ink">{title}</DialogTitle>
+                {description && <DialogDescription className="mt-1 text-sm text-body">{description}</DialogDescription>}
               </div>
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
-                className="rounded-lg p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                className="rounded-control p-2 text-muted hover:text-ink hover:bg-surface-muted transition-colors size-11 flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                 aria-label="Tutup"
               >
-                <X className="h-5 w-5" />
+                <X className="size-5" />
               </button>
             </div>
           </div>
           <div className="mt-4">{children}</div>
           {(action || onConfirm) && (
-            <div className="mt-6 flex flex-wrap justify-end gap-3 border-t border-slate-100 pt-4">
+            <div className="mt-6 flex flex-wrap justify-end gap-3 border-t border-line pt-4">
               <Button variant="secondary" onClick={() => onOpenChange(false)} disabled={loading}>
                 {cancelText}
               </Button>
@@ -120,7 +120,7 @@ export function ConfirmModal({
         </Button>
       }
     >
-      <p className="text-sm text-slate-600 leading-relaxed">{message}</p>
+      <p className="text-sm text-body leading-relaxed">{message}</p>
     </Modal>
   );
 }

@@ -149,6 +149,7 @@ drop trigger if exists on_report_status_changed on public.reports;
 -- 3c. Keep the approval time separate from pickup_at and updated_at so the
 --     claim history stays accurate after the item is handed over.
 alter table public.claims add column if not exists approved_at timestamptz;
+alter table public.claims add column if not exists handed_over_at timestamptz;
 
 create or replace function public.set_claim_approved_at()
 returns trigger
@@ -180,13 +181,16 @@ create policy "Anyone can browse found items"
 -- Catalog items are only created by the security-definer report trigger.
 drop policy if exists "Users can create found items" on public.items;
 
--- 5. Employees may only edit their own draft report; admins keep full access.
+-- 5. Employees may only edit their own draft report; non-staff cannot publish/unverify.
 drop policy if exists "Users can update their reports" on public.reports;
 create policy "Users can update their reports"
   on public.reports for update using (
     public.is_staff()
     or (auth.uid() = user_id and status = 'draf')
-  ) with check (public.is_staff() or auth.uid() = user_id);
+  ) with check (
+    public.is_staff()
+    or (auth.uid() = user_id and status = 'draf' and diterima_di_pos = false)
+  );
 
 -- 6. Claims can only be created for published, still-claimable items.
 drop policy if exists "Users can create their claims" on public.claims;
@@ -201,16 +205,175 @@ create policy "Users can create their claims"
     )
   );
 
-commit;
+-- 7. Storage bucket hardening: enforce limits on public photos and keep originals private.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'item-images',
+  'item-images',
+  true,
+  5242880,
+  array['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif']
+)
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
 
--- Optional, after checking for duplicates:
---   select item_id, user_id, count(*)
---   from public.claims
---   where status in ('diajukan', 'ditinjau', 'disetujui')
---   group by item_id, user_id
---   having count(*) > 1;
--- If the result is empty, enable the database-level duplicate guard:
---
--- create unique index if not exists claims_one_active_per_user_item
---   on public.claims (item_id, user_id)
---   where status in ('diajukan', 'ditinjau', 'disetujui');
+-- Prevent storage.list enumeration of item-images; direct public URLs remain accessible.
+drop policy if exists "Public item images are viewable" on storage.objects;
+
+-- Private bucket for unblurred photos. Found-item photos are blurred before
+-- upload, so the catalog only ever shows the blurred copy. Staff review the
+-- clear copy through a server action that signs a short-lived URL.
+insert into storage.buckets (id, name, public)
+values ('item-originals', 'item-originals', false)
+on conflict (id) do update set public = false;
+
+drop policy if exists "Users can upload original item images" on storage.objects;
+create policy "Users can upload original item images"
+  on storage.objects for insert to authenticated
+  with check (
+    bucket_id = 'item-originals'
+    and (storage.foldername(name))[1] = auth.uid()::text
+    and (storage.foldername(name))[2] = 'original'
+  );
+
+-- 8. Allow staff to write custody/timeline events (RLS was SELECT-only).
+drop policy if exists "Staff can create report events" on public.report_events;
+create policy "Staff can create report events"
+  on public.report_events for insert to authenticated
+  with check (public.is_staff());
+
+-- 9. Prevent duplicate active claims per (item_id, user_id).
+-- Fails if duplicates already exist; resolve duplicates first, then re-run.
+create unique index if not exists claims_one_active_per_user_item
+  on public.claims (item_id, user_id)
+  where status in ('diajukan', 'ditinjau', 'disetujui');
+
+-- 10. Prevent claimants/finder from reading others' private answers.
+drop policy if exists "Report and item owners can view claims" on public.claims;
+drop policy if exists "Users and staff can view claims" on public.claims;
+create policy "Users and staff can view claims"
+  on public.claims for select using (
+    auth.uid() = user_id
+    or public.is_staff()
+  );
+
+-- 11. Enforce claim.report_id to match the claimed item's source report.
+create or replace function public.enforce_claim_report_consistency()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  source_report uuid;
+begin
+  select items.source_report_id
+    into source_report
+  from public.items
+  where items.id = new.item_id;
+
+  new.report_id := source_report;
+  return new;
+end;
+$$;
+
+drop trigger if exists enforce_claim_report_consistency on public.claims;
+create trigger enforce_claim_report_consistency
+before insert on public.claims
+for each row execute procedure public.enforce_claim_report_consistency();
+
+-- 12. Prevent claimant from rescheduling after physical handover.
+create or replace function public.schedule_claim(
+  claim_id uuid,
+  requested_pickup_at timestamptz
+)
+returns public.claims
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  updated_claim public.claims;
+begin
+  update public.claims
+  set pickup_at = requested_pickup_at
+  where id = claim_id
+    and user_id = auth.uid()
+    and status = 'disetujui'
+    and handed_over_at is null
+  returning * into updated_claim;
+
+  if updated_claim.id is null then
+    raise exception 'Klaim tidak ditemukan, belum disetujui, atau sudah diserahkan';
+  end if;
+
+  return updated_claim;
+end;
+$$;
+
+grant execute on function public.schedule_claim(uuid, timestamptz) to authenticated;
+
+-- 13. Prevent users from self-promoting profile role.
+drop policy if exists "Users can update their profile" on public.profiles;
+create policy "Users can update their profile"
+  on public.profiles for update
+  using (auth.uid() = id)
+  with check (auth.uid() = id);
+
+create or replace function public.prevent_profile_role_escalation()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  -- Allow maintenance/bootstrap changes from SQL contexts without an authenticated end-user session.
+  if auth.uid() is null then
+    return new;
+  end if;
+
+  if new.role is distinct from old.role and not public.is_staff() then
+    new.role := old.role;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists prevent_profile_role_escalation on public.profiles;
+create trigger prevent_profile_role_escalation
+before update on public.profiles
+for each row execute procedure public.prevent_profile_role_escalation();
+
+-- 14. Normalize claim inserts (server-enforced initial state and ticket).
+create or replace function public.normalize_claim_insert()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  generated_ticket text;
+begin
+  new.status := 'diajukan';
+  new.approved_at := null;
+  new.pickup_at := null;
+  new.pickup_location := null;
+  new.handed_over_at := null;
+
+  if new.ticket_code is null or btrim(new.ticket_code) = '' then
+    generated_ticket := 'TKT-' || to_char(now() at time zone 'Asia/Jakarta', 'YYMMDD') || '-' || lpad((floor(random() * 9000) + 1000)::text, 4, '0');
+    new.ticket_code := generated_ticket;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists normalize_claim_insert on public.claims;
+create trigger normalize_claim_insert
+before insert on public.claims
+for each row execute procedure public.normalize_claim_insert();
+
+commit;
