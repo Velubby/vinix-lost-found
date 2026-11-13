@@ -40,12 +40,21 @@ import { EmptyState } from '@/components/ui/EmptyState';
 type CategoryTab = 'hilang' | 'temuan' | 'klaim';
 type FilterStatus = 'semua' | ReportStatus;
 
-const REPORT_STATUS_LABELS: Record<ReportStatus, string> = {
-  aktif: 'Dalam Pencarian',
-  ditemukan: 'Ditemukan di Posko',
-  selesai: 'Selesai (Diserahkan)',
-  klaim: 'Proses Klaim',
-  draf: 'Draf',
+const REPORT_STATUS_LABELS: Record<UserReportRow['type'], Record<ReportStatus, string>> = {
+  hilang: {
+    aktif: 'Dalam Pencarian',
+    ditemukan: 'Ditemukan di Posko',
+    selesai: 'Selesai (Diserahkan)',
+    klaim: 'Proses Klaim',
+    draf: 'Draf',
+  },
+  temuan: {
+    aktif: 'Menunggu Penyerahan',
+    ditemukan: 'Menunggu Klaim',
+    selesai: 'Selesai (Diserahkan)',
+    klaim: 'Verifikasi Klaim',
+    draf: 'Draf',
+  },
 };
 
 const CLAIM_STATUS_LABELS: Record<ClaimRow['status'], string> = {
@@ -233,7 +242,8 @@ export default function MyReportsPage() {
           <div className="flex flex-wrap items-center gap-2">
             <span className="mr-1 text-xs font-semibold text-muted">Status:</span>
             {(['semua', 'aktif', 'ditemukan', 'selesai', 'draf'] as FilterStatus[]).map((st) => {
-              const label = st === 'semua' ? 'Semua Status' : REPORT_STATUS_LABELS[st];
+              const statusLabels = REPORT_STATUS_LABELS[categoryTab === 'temuan' ? 'temuan' : 'hilang'];
+              const label = st === 'semua' ? 'Semua Status' : statusLabels[st];
               const count = st === 'semua' ? currentCategoryReports.length : currentCategoryReports.filter((r) => r.status === st).length;
 
               return (
@@ -265,7 +275,7 @@ export default function MyReportsPage() {
         <div className="space-y-4">
           {filteredReports.length > 0 ? (
             filteredReports.map((report) => {
-              const isMenunggu = (report.status as string) === 'Menunggu Penyerahan';
+              const isMenunggu = report.type === 'temuan' && report.status === 'aktif';
               const isFoundLostItem = report.type === 'hilang' && report.status === 'ditemukan';
               const statusTone = REPORT_STATUS_COLORS[report.status];
 
@@ -353,7 +363,7 @@ export default function MyReportsPage() {
                             className={`inline-flex items-center gap-1.5 rounded-pill border px-2.5 py-0.5 text-[11px] font-semibold ${statusTone.bg} ${statusTone.text} ${statusTone.border}`}
                           >
                             <span className={`size-1.5 rounded-full ${statusTone.dot}`} aria-hidden="true" />
-                            {REPORT_STATUS_LABELS[report.status]}
+                            {REPORT_STATUS_LABELS[report.type][report.status]}
                           </span>
                         </div>
 
