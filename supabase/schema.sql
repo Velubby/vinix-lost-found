@@ -76,6 +76,7 @@ create table if not exists public.claims (
   ticket_code text not null unique,
   pickup_location text,
   pickup_at timestamptz,
+  reviewed_at timestamptz,
   approved_at timestamptz,
   handed_over_at timestamptz,
   created_at timestamptz not null default now(),
@@ -106,6 +107,7 @@ alter table public.reports add column if not exists diterima_di_pos boolean defa
 alter table public.claims alter column report_id drop not null;
 alter table public.claims add column if not exists pickup_location text;
 alter table public.claims add column if not exists pickup_at timestamptz;
+alter table public.claims add column if not exists reviewed_at timestamptz;
 alter table public.claims add column if not exists approved_at timestamptz;
 alter table public.claims add column if not exists handed_over_at timestamptz;
 alter table public.items add column if not exists source_report_id uuid unique;
@@ -467,13 +469,17 @@ create trigger set_claims_updated_at
 before update on public.claims
 for each row execute procedure public.set_updated_at();
 
--- pickup_at records the physical handover, so updated_at can no longer stand in
--- for the approval time once an item is handed over.
+-- Keep review/approval timestamps separate from updated_at so the claim
+-- timeline stays accurate after later status changes.
 create or replace function public.set_claim_approved_at()
 returns trigger
 language plpgsql
 as $$
 begin
+  if new.status = 'ditinjau' and old.status is distinct from 'ditinjau' then
+    new.reviewed_at = now();
+  end if;
+
   if new.status = 'disetujui' and new.approved_at is null then
     new.approved_at = now();
   end if;
@@ -512,6 +518,7 @@ declare
   generated_ticket text;
 begin
   new.status := 'diajukan';
+  new.reviewed_at := null;
   new.approved_at := null;
   new.pickup_at := null;
   new.pickup_location := null;

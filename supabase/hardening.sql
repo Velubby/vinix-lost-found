@@ -146,8 +146,9 @@ $$;
 --     handover). Drop the generic duplicate status event.
 drop trigger if exists on_report_status_changed on public.reports;
 
--- 3c. Keep the approval time separate from pickup_at and updated_at so the
+-- 3c. Keep review/approval times separate from pickup_at and updated_at so the
 --     claim history stays accurate after the item is handed over.
+alter table public.claims add column if not exists reviewed_at timestamptz;
 alter table public.claims add column if not exists approved_at timestamptz;
 alter table public.claims add column if not exists handed_over_at timestamptz;
 
@@ -156,6 +157,10 @@ returns trigger
 language plpgsql
 as $$
 begin
+  if new.status = 'ditinjau' and old.status is distinct from 'ditinjau' then
+    new.reviewed_at = now();
+  end if;
+
   if new.status = 'disetujui' and new.approved_at is null then
     new.approved_at = now();
   end if;
@@ -167,6 +172,30 @@ drop trigger if exists set_claims_approved_at on public.claims;
 create trigger set_claims_approved_at
 before update on public.claims
 for each row execute procedure public.set_claim_approved_at();
+
+-- Backfill review time for claims that went through "ditinjau" before this
+-- column existed. The window prevents picking up events from a later claim
+-- on the same item.
+update public.claims c
+set reviewed_at = (
+  select min(e.created_at)
+  from public.report_events e
+  where e.report_id = c.report_id
+    and e.title = 'Klaim sedang ditinjau'
+    and e.created_at >= c.created_at
+    and e.created_at < coalesce(
+      (
+        select min(next_claim.created_at)
+        from public.claims next_claim
+        where next_claim.item_id = c.item_id
+          and next_claim.created_at > c.created_at
+      ),
+      'infinity'::timestamptz
+    )
+)
+where c.reviewed_at is null
+  and c.report_id is not null
+  and c.status in ('ditinjau', 'disetujui', 'ditolak');
 
 -- 4. Catalog RLS: only published items are public. Staff and the reporter
 --    can still see their own unpublished item.
@@ -357,6 +386,7 @@ declare
   generated_ticket text;
 begin
   new.status := 'diajukan';
+  new.reviewed_at := null;
   new.approved_at := null;
   new.pickup_at := null;
   new.pickup_location := null;

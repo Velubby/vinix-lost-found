@@ -35,6 +35,7 @@ export type ClaimRow = {
   ticket_code: string;
   pickup_location: string | null;
   pickup_at: string | null;
+  reviewed_at: string | null;
   approved_at: string | null;
   created_at: string;
   updated_at: string;
@@ -68,7 +69,7 @@ export async function fetchUserReports() {
       .order('created_at', { ascending: false }),
     supabase
       .from('claims')
-      .select('id, user_id, report_id, item_id, status, ticket_code, pickup_location, pickup_at, approved_at, created_at, updated_at, item:items!item_id(id, title, location, image_url, status)')
+      .select('id, user_id, report_id, item_id, status, ticket_code, pickup_location, pickup_at, reviewed_at, approved_at, created_at, updated_at, item:items!item_id(id, title, location, image_url, status)')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false }),
   ]);
@@ -85,6 +86,7 @@ export async function fetchUserReports() {
     ticket_code: string;
     pickup_location: string | null;
     pickup_at: string | null;
+    reviewed_at: string | null;
     approved_at: string | null;
     created_at: string;
     updated_at: string;
@@ -98,6 +100,7 @@ export async function fetchUserReports() {
     ticket_code: c.ticket_code,
     pickup_location: c.pickup_location,
     pickup_at: c.pickup_at,
+    reviewed_at: c.reviewed_at,
     approved_at: c.approved_at,
     created_at: c.created_at,
     updated_at: c.updated_at,
@@ -137,13 +140,14 @@ export async function fetchLatestUserReport(reportId?: string, ticketCode?: stri
     if (!ownTicket) {
       const { data: ticketData } = await supabase
         .from('claims')
-        .select('id, user_id, report_id, item_id, status, ticket_code, pickup_location, pickup_at, approved_at, created_at, updated_at, item:items!item_id(id, title, location, image_url, status)')
+        .select('id, user_id, report_id, item_id, status, ticket_code, pickup_location, pickup_at, reviewed_at, approved_at, created_at, updated_at, item:items!item_id(id, title, location, image_url, status)')
         .ilike('ticket_code', ticketCode)
         .maybeSingle();
       if (ticketData) {
         const c = ticketData as unknown as {
           id: string; user_id?: string; report_id: string | null; item_id: string;
           status: ClaimRow['status']; ticket_code: string; pickup_location: string | null; pickup_at: string | null;
+          reviewed_at: string | null;
           approved_at: string | null;
           created_at: string; updated_at: string;
           item: ClaimRow['item'] | Array<{ id?: string; title: string; location: string; image_url: string | null; status: string }> | null;
@@ -157,6 +161,7 @@ export async function fetchLatestUserReport(reportId?: string, ticketCode?: stri
           ticket_code: c.ticket_code,
           pickup_location: c.pickup_location,
           pickup_at: c.pickup_at,
+          reviewed_at: c.reviewed_at,
           approved_at: c.approved_at,
           created_at: c.created_at,
           updated_at: c.updated_at,
@@ -197,7 +202,7 @@ export async function fetchLatestUserReport(reportId?: string, ticketCode?: stri
     if (itemRow?.id) {
       const { data: itemClaim } = await supabase
         .from('claims')
-        .select('id, user_id, report_id, item_id, status, ticket_code, pickup_location, pickup_at, approved_at, created_at, updated_at, item:items!item_id(id, title, location, image_url, status)')
+        .select('id, user_id, report_id, item_id, status, ticket_code, pickup_location, pickup_at, reviewed_at, approved_at, created_at, updated_at, item:items!item_id(id, title, location, image_url, status)')
         .eq('item_id', itemRow.id)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -206,6 +211,7 @@ export async function fetchLatestUserReport(reportId?: string, ticketCode?: stri
         const c = itemClaim as unknown as {
           id: string; user_id?: string; report_id: string | null; item_id: string;
           status: ClaimRow['status']; ticket_code: string; pickup_location: string | null; pickup_at: string | null;
+          reviewed_at: string | null;
           approved_at: string | null;
           created_at: string; updated_at: string;
           item: ClaimRow['item'] | Array<{ id?: string; title: string; location: string; image_url: string | null; status: string }> | null;
@@ -219,6 +225,7 @@ export async function fetchLatestUserReport(reportId?: string, ticketCode?: stri
           ticket_code: c.ticket_code,
           pickup_location: c.pickup_location,
           pickup_at: c.pickup_at,
+          reviewed_at: c.reviewed_at,
           approved_at: c.approved_at,
           created_at: c.created_at,
           updated_at: c.updated_at,

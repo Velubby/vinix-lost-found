@@ -93,12 +93,13 @@ function getClaimTimeline(claim: ClaimRow) {
     },
   ];
 
-  if (claim.status === 'ditinjau') {
+  const reviewedAt = claim.reviewed_at ?? (claim.status === 'ditinjau' ? claim.updated_at : null);
+  if (reviewedAt) {
     timeline.push({
       id: 'claim-under-review',
       title: 'Ciri kepemilikan sedang diperiksa',
       description: 'Petugas mencocokkan ciri khusus yang kamu kirim dengan barang temuan.',
-      created_at: claim.updated_at,
+      created_at: reviewedAt,
     });
   }
 
