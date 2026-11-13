@@ -22,16 +22,19 @@ const CONTACT_EMAIL = 'mailto:lostfound@vinix7.id';
 
 function getReportProgress(report: Pick<UserReportRow, 'type' | 'status'>, claim?: ClaimRow | null) {
   const isFoundReport = report.type === 'temuan';
+  // Lost reports are returned directly by staff; they do not go through a
+  // claim ticket. Only show the claim verification step when one applies.
+  const hasClaimStep = isFoundReport || report.status === 'klaim' || Boolean(claim);
   const steps = isFoundReport
     ? ['Temuan dilaporkan', 'Menunggu Penyerahan', 'Menunggu Klaim', 'Verifikasi klaim', 'Selesai']
-    : ['Laporan dibuat', 'Pencarian', 'Barang ditemukan', 'Verifikasi klaim', 'Selesai'];
-  const statusIndex = {
-    draf: 0,
-    aktif: 1,
-    ditemukan: 2,
-    klaim: 3,
-    selesai: steps.length - 1,
-  }[report.status];
+    : hasClaimStep
+    ? ['Laporan dibuat', 'Pencarian', 'Barang ditemukan', 'Verifikasi klaim', 'Selesai']
+    : ['Laporan dibuat', 'Pencarian', 'Barang ditemukan', 'Selesai'];
+  const statusIndex = report.status === 'selesai'
+    ? steps.length - 1
+    : report.status === 'klaim'
+    ? (hasClaimStep ? 3 : 2)
+    : { draf: 0, aktif: 1, ditemukan: 2 }[report.status];
   const statusLabel = {
     draf: 'Draf',
     aktif: isFoundReport ? 'Menunggu Penyerahan' : 'Dalam pencarian',
