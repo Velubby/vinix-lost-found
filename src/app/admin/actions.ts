@@ -6,19 +6,21 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { createNotification } from '@/lib/supabase/server-notifications';
 import { claimStatusNotification, reportStatusNotification } from '@/lib/notification-copy';
+import { CLAIM_CLOSED_NOTE } from '@/lib/claim-reasons';
 import type { FilterStatus, UpdateClaimInput, BulkUpdateInput, Claim, LostReport, ReportStatus, FilterReportStatus } from '@/types/claims';
 
 const updateClaimSchema = z.object({
   claimId: z.string().uuid(),
   status: z.enum(['ditinjau', 'disetujui', 'ditolak']),
-  pickupLocation: z.string().min(1).max(200).optional(),
-  rejectReason: z.string().max(300).optional(),
+  pickupLocation: z.string().trim().min(1).max(200).optional(),
+  rejectReason: z.string().trim().max(300).optional(),
 });
 
 const bulkUpdateSchema = z.object({
   claimIds: z.array(z.string().uuid()).min(1).max(50),
   status: z.enum(['ditinjau', 'disetujui', 'ditolak']),
-  pickupLocation: z.string().min(1).max(200).optional(),
+  pickupLocation: z.string().trim().min(1).max(200).optional(),
+  rejectReason: z.string().trim().max(300).optional(),
 });
 
 const handoverClaimSchema = z.object({
@@ -59,6 +61,88 @@ async function requireAdmin() {
 
   return { supabase, user };
 }
+
+type ServerSupabase = Awaited<ReturnType<typeof createClient>>;
+
+type CompetingClaim = {
+  id: string;
+  user_id: string;
+  ticket_code: string;
+  report_id: string | null;
+};
+
+// A winning claim makes every other open claim on the same item impossible to
+// fulfil. Close them with their own status so staff do not reject them one by
+// one and claimants do not stay stuck on "menunggu verifikasi".
+async function closeCompetingClaims(
+  supabase: ServerSupabase,
+  input: { itemId: string; excludeClaimId?: string; actorId: string }
+): Promise<number> {
+  let query = supabase
+    .from('claims')
+    .select('id, user_id, ticket_code, report_id')
+    .eq('item_id', input.itemId)
+    .in('status', ['diajukan', 'ditinjau']);
+
+  if (input.excludeClaimId) {
+    query = query.neq('id', input.excludeClaimId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Fetch competing claims error:', error);
+    return 0;
+  }
+
+  const competing = (data ?? []) as CompetingClaim[];
+  if (competing.length === 0) return 0;
+
+  const closedAt = new Date().toISOString();
+  const { error: closeError } = await supabase
+    .from('claims')
+    .update({
+      status: 'ditutup',
+      decision_note: CLAIM_CLOSED_NOTE,
+      updated_at: closedAt,
+    })
+    .in('id', competing.map((claim) => claim.id));
+
+  if (closeError) {
+    console.error('Close competing claims error:', closeError);
+    return 0;
+  }
+
+  for (const claim of competing) {
+    try {
+      await createNotification({
+        userId: claim.user_id,
+        ...claimStatusNotification({
+          status: 'ditutup',
+          audience: 'claimant',
+          ticketCode: claim.ticket_code,
+        }),
+        type: 'claim',
+        link: `/lacak?ticket=${claim.ticket_code}`,
+      });
+    } catch (notifyError) {
+      console.error('Send closed claim notification error:', notifyError);
+    }
+
+    if (claim.report_id) {
+      const { error: eventError } = await supabase.from('report_events').insert({
+        report_id: claim.report_id,
+        title: 'Klaim ditutup',
+        description: CLAIM_CLOSED_NOTE,
+        created_by: input.actorId,
+      });
+      if (eventError) console.error('Insert closed claim event error:', eventError);
+    }
+  }
+
+  return competing.length;
+}
+
 export async function updateClaimAction(input: UpdateClaimInput): Promise<ActionResult> {
   try {
     const { supabase, user } = await requireAdmin();
@@ -78,12 +162,59 @@ export async function updateClaimAction(input: UpdateClaimInput): Promise<Action
       return { success: false, error: 'Klaim sudah disetujui dan tidak dapat diubah kembali', code: 'INVALID_TRANSITION' };
     }
 
+    if (claim.status === 'ditutup') {
+      return { success: false, error: 'Klaim sudah ditutup karena barang diklaim pemohon lain', code: 'INVALID_TRANSITION' };
+    }
+
     if (claim.status === 'ditolak' && parsed.status !== 'ditinjau') {
       return { success: false, error: 'Klaim yang ditolak hanya dapat dipulihkan ke status "Ditinjau"', code: 'INVALID_TRANSITION' };
     }
 
+    // Reopening a rejected claim must not reopen an item that already belongs
+    // to a winning claim; the status trigger would otherwise overwrite it.
+    if (claim.status === 'ditolak') {
+      const { data: approvedElsewhere } = await supabase
+        .from('claims')
+        .select('ticket_code')
+        .eq('item_id', claim.item_id)
+        .eq('status', 'disetujui')
+        .limit(1)
+        .maybeSingle();
+
+      if (approvedElsewhere) {
+        return {
+          success: false,
+          error: `Klaim tidak dapat dibuka kembali karena barang sudah disetujui untuk tiket ${approvedElsewhere.ticket_code}`,
+          code: 'ITEM_ALREADY_CLAIMED',
+        };
+      }
+    }
+
     if (parsed.status === 'disetujui' && !parsed.pickupLocation) {
       return { success: false, error: 'Lokasi pengambilan wajib diisi untuk persetujuan', code: 'MISSING_PICKUP' };
+    }
+
+    if (parsed.status === 'ditolak' && !parsed.rejectReason) {
+      return { success: false, error: 'Pilih alasan penolakan agar tercatat untuk pemohon', code: 'MISSING_REASON' };
+    }
+
+    if (parsed.status === 'disetujui') {
+      const { data: approvedElsewhere } = await supabase
+        .from('claims')
+        .select('ticket_code')
+        .eq('item_id', claim.item_id)
+        .eq('status', 'disetujui')
+        .neq('id', claim.id)
+        .limit(1)
+        .maybeSingle();
+
+      if (approvedElsewhere) {
+        return {
+          success: false,
+          error: `Barang ini sudah disetujui untuk tiket ${approvedElsewhere.ticket_code}`,
+          code: 'ITEM_ALREADY_CLAIMED',
+        };
+      }
     }
 
     const updateData: Record<string, unknown> = {
@@ -93,6 +224,14 @@ export async function updateClaimAction(input: UpdateClaimInput): Promise<Action
 
     if (parsed.pickupLocation) {
       updateData.pickup_location = parsed.pickupLocation;
+    }
+
+    if (parsed.status === 'ditolak') {
+      updateData.decision_note = parsed.rejectReason;
+    } else if (parsed.status === 'ditinjau' || parsed.status === 'disetujui') {
+      // Reopening or approving clears the previous rejection reason so the
+      // claimant never sees a stale note on the new state.
+      updateData.decision_note = null;
     }
 
     const { error: updateError } = await supabase
@@ -119,6 +258,12 @@ export async function updateClaimAction(input: UpdateClaimInput): Promise<Action
           .update({ status: 'Klaim Disetujui' })
           .eq('id', claim.item_id);
       }
+
+      await closeCompetingClaims(supabase, {
+        itemId: claim.item_id,
+        excludeClaimId: claim.id,
+        actorId: user.id,
+      });
     }
 
     try {
@@ -174,7 +319,7 @@ export async function updateClaimAction(input: UpdateClaimInput): Promise<Action
 
       if (parsed.status === 'ditolak') {
         title = 'Klaim ditolak oleh petugas';
-        desc = parsed.rejectReason ? `Alasan penolakan: ${parsed.rejectReason}` : 'Ciri rahasia yang diajukan belum sesuai dengan barang temuan.';
+        desc = `Alasan penolakan: ${parsed.rejectReason}`;
       } else if (claim.status === 'ditolak' && parsed.status === 'ditinjau') {
         title = 'Klaim dibuka kembali untuk peninjauan ulang';
         desc = 'Petugas membuka kembali tiket klaim ini untuk verifikasi ulang.';
@@ -190,6 +335,8 @@ export async function updateClaimAction(input: UpdateClaimInput): Promise<Action
     }
 
     revalidatePath('/admin');
+    revalidatePath('/lacak');
+    revalidatePath('/laporan-saya');
     return { success: true, data: null };
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -213,6 +360,10 @@ export async function bulkUpdateClaimsAction(input: BulkUpdateInput): Promise<Ac
       return { success: false, error: 'Lokasi pengambilan wajib diisi untuk persetujuan massal', code: 'MISSING_PICKUP' };
     }
 
+    if (parsed.status === 'ditolak' && !parsed.rejectReason) {
+      return { success: false, error: 'Pilih alasan penolakan agar tercatat untuk pemohon', code: 'MISSING_REASON' };
+    }
+
     const { data: claims, error: fetchError } = await supabase
       .from('claims')
       .select('id, status, item_id, report_id, ticket_code, user_id')
@@ -232,6 +383,36 @@ export async function bulkUpdateClaimsAction(input: BulkUpdateInput): Promise<Ac
       return { success: false, error: 'Semua klaim terpilih sudah diproses', code: 'ALREADY_PROCESSED' };
     }
 
+    if (parsed.status === 'disetujui') {
+      const approvalItemIds = processableClaims.map((claim) => claim.item_id);
+      if (new Set(approvalItemIds).size !== approvalItemIds.length) {
+        return {
+          success: false,
+          error: 'Pilih hanya satu klaim untuk setiap barang agar tidak ada dua pemenang',
+          code: 'MULTIPLE_CLAIMS_PER_ITEM',
+        };
+      }
+
+      const { data: alreadyApproved, error: approvedLookupError } = await supabase
+        .from('claims')
+        .select('ticket_code')
+        .in('item_id', approvalItemIds)
+        .eq('status', 'disetujui')
+        .limit(1);
+
+      if (approvedLookupError) {
+        return { success: false, error: 'Gagal memeriksa klaim yang sudah disetujui', code: 'FETCH_FAILED' };
+      }
+
+      if (alreadyApproved && alreadyApproved.length > 0) {
+        return {
+          success: false,
+          error: `Salah satu barang sudah disetujui untuk tiket ${alreadyApproved[0].ticket_code}`,
+          code: 'ITEM_ALREADY_CLAIMED',
+        };
+      }
+    }
+
     const updateData: Record<string, unknown> = {
       status: parsed.status,
       updated_at: new Date().toISOString(),
@@ -239,6 +420,10 @@ export async function bulkUpdateClaimsAction(input: BulkUpdateInput): Promise<Ac
 
     if (parsed.pickupLocation) {
       updateData.pickup_location = parsed.pickupLocation;
+    }
+
+    if (parsed.status === 'ditolak') {
+      updateData.decision_note = parsed.rejectReason;
     }
 
     const { error: updateError } = await supabase
@@ -267,6 +452,13 @@ export async function bulkUpdateClaimsAction(input: BulkUpdateInput): Promise<Ac
             .update({ status: 'Klaim Disetujui' })
             .in('id', itemsToRestore);
         }
+
+        for (const itemId of approvedItemIds) {
+          await closeCompetingClaims(supabase, {
+            itemId,
+            actorId: user.id,
+          });
+        }
       }
     }
 
@@ -274,8 +466,10 @@ export async function bulkUpdateClaimsAction(input: BulkUpdateInput): Promise<Ac
       .filter(claim => Boolean(claim.report_id))
       .map(claim => ({
         report_id: claim.report_id as string,
-        title: 'Status klaim diperbarui oleh petugas (massal)',
-        description: `Status berubah dari ${claim.status} menjadi ${parsed.status}${parsed.pickupLocation ? `, lokasi: ${parsed.pickupLocation}` : ''}`,
+        title: parsed.status === 'ditolak' ? 'Klaim ditolak oleh petugas (massal)' : 'Status klaim diperbarui oleh petugas (massal)',
+        description: parsed.status === 'ditolak'
+          ? `Alasan penolakan: ${parsed.rejectReason}`
+          : `Status berubah dari ${claim.status} menjadi ${parsed.status}${parsed.pickupLocation ? `, lokasi: ${parsed.pickupLocation}` : ''}`,
         created_by: user.id,
       }));
 
@@ -312,6 +506,7 @@ export async function bulkUpdateClaimsAction(input: BulkUpdateInput): Promise<Ac
               audience: 'claimant',
               ticketCode,
               pickupLocation: parsed.pickupLocation ?? null,
+              rejectReason: parsed.rejectReason ?? null,
             }),
             type: 'claim',
             link: `/lacak?ticket=${ticketCode}`,
@@ -340,6 +535,8 @@ export async function bulkUpdateClaimsAction(input: BulkUpdateInput): Promise<Ac
     }
 
     revalidatePath('/admin');
+    revalidatePath('/lacak');
+    revalidatePath('/laporan-saya');
     return { success: true, data: { updated: processableClaims.length } };
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -383,6 +580,14 @@ export async function markClaimHandedOverAction(input: { claimId: string }): Pro
       console.error('Mark handover claim error:', updateClaimError);
       return { success: false, error: 'Gagal mencatat serah terima', code: 'UPDATE_FAILED' };
     }
+
+    // Approval already closes competing claims, but a direct SQL insert could
+    // leave one open until handover. Close it now so nobody waits forever.
+    await closeCompetingClaims(supabase, {
+      itemId: claim.item_id,
+      excludeClaimId: claim.id,
+      actorId: user.id,
+    });
 
     const { data: item } = await supabase
       .from('items')
@@ -459,6 +664,7 @@ export async function fetchClaimsAction(
         user_id,
         private_answers,
         contact_phone,
+        decision_note,
         status,
         ticket_code,
         pickup_location,
@@ -583,7 +789,7 @@ export async function getAdminTabCountsAction(): Promise<ActionResult<{
   }
 }
 
-export async function getClaimStatsAction(): Promise<ActionResult<{ total: number; pending: number; approved: number; rejected: number; underReview: number }>> {
+export async function getClaimStatsAction(): Promise<ActionResult<{ total: number; pending: number; approved: number; rejected: number; underReview: number; closed: number }>> {
   try {
     await requireAdmin();
     const supabase = await createClient();
@@ -603,6 +809,7 @@ export async function getClaimStatsAction(): Promise<ActionResult<{ total: numbe
       underReview: claims.filter(c => c.status === 'ditinjau').length,
       approved: claims.filter(c => c.status === 'disetujui').length,
       rejected: claims.filter(c => c.status === 'ditolak').length,
+      closed: claims.filter(c => c.status === 'ditutup').length,
     };
 
     return { success: true, data: stats };

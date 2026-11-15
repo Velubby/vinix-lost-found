@@ -20,6 +20,8 @@ import {
   HandHeart,
   Ticket,
   Bell,
+  XCircle,
+  Archive,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -418,6 +420,7 @@ function MyReportsContent() {
           {claims.length > 0 ? (
             claims.map((claim) => {
               const statusTone = STATUS_COLORS[claim.status];
+              const itemAvailable = Boolean(claim.item?.status?.toLowerCase().includes('ditemukan'));
 
               return (
                 <article
@@ -449,6 +452,43 @@ function MyReportsContent() {
                         <span className="block text-pretty text-[13px] leading-5 text-body">
                           Serah terima selesai pada {formatDate(claim.pickup_at)}. Simpan tiket ini sebagai bukti pengambilan.
                         </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {(claim.status === 'ditolak' || claim.status === 'ditutup') && (
+                    <div
+                      className={[
+                        'mb-4 flex items-start gap-3 rounded-surface border p-4',
+                        claim.status === 'ditolak'
+                          ? 'border-danger/20 bg-danger-soft'
+                          : 'border-line bg-surface-muted',
+                      ].join(' ')}
+                    >
+                      {claim.status === 'ditolak' ? (
+                        <XCircle className="mt-0.5 size-5 shrink-0 text-danger" aria-hidden="true" />
+                      ) : (
+                        <Archive className="mt-0.5 size-5 shrink-0 text-muted" aria-hidden="true" />
+                      )}
+                      <div className="min-w-0 space-y-1">
+                        <strong className="block text-[13px] font-semibold text-ink">
+                          {claim.status === 'ditolak' ? 'Klaim ditolak' : 'Klaim ditutup'}
+                        </strong>
+                        <span className="block text-pretty text-[13px] leading-5 text-body">
+                          {claim.decision_note ||
+                            (claim.status === 'ditolak'
+                              ? 'Ciri kepemilikan belum cocok dengan barang temuan.'
+                              : 'Barang sudah diklaim dan diserahkan kepada pemohon lain yang terverifikasi.')}
+                        </span>
+                        {claim.status === 'ditolak' && itemAvailable && (
+                          <Link
+                            href={`/barang/${claim.item_id}`}
+                            className="inline-flex min-h-9 items-center gap-1.5 pt-1 text-[13px] font-semibold text-accent transition-colors hover:text-brand"
+                          >
+                            Ajukan Klaim Ulang
+                            <ExternalLink className="size-3.5" aria-hidden="true" />
+                          </Link>
+                        )}
                       </div>
                     </div>
                   )}

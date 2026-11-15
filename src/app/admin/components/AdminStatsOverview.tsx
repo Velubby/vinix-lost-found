@@ -19,6 +19,7 @@ const STAT_CARDS: Array<{
   { id: 'ditinjau', label: 'Ditinjau', dot: 'bg-info', value: (stats) => stats?.underReview ?? 0 },
   { id: 'disetujui', label: 'Disetujui', dot: 'bg-success', value: (stats) => stats?.approved ?? 0 },
   { id: 'ditolak', label: 'Ditolak', dot: 'bg-danger', value: (stats) => stats?.rejected ?? 0 },
+  { id: 'ditutup', label: 'Ditutup', dot: 'bg-muted', value: (stats) => stats?.closed ?? 0 },
 ];
 
 export function AdminStatsOverview({
@@ -29,7 +30,8 @@ export function AdminStatsOverview({
 }: AdminStatsOverviewProps) {
   if (isLoading) {
     return (
-      <section aria-label="Statistik Klaim" className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
+      <section aria-label="Statistik Klaim" className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-6">
+        <StatsCardSkeleton />
         <StatsCardSkeleton />
         <StatsCardSkeleton />
         <StatsCardSkeleton />
@@ -40,7 +42,7 @@ export function AdminStatsOverview({
   }
 
   return (
-    <section aria-label="Statistik Klaim" className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
+    <section aria-label="Statistik Klaim" className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-6">
       {STAT_CARDS.map((card) => {
         const isActive = statusFilter === card.id;
 
@@ -52,7 +54,6 @@ export function AdminStatsOverview({
             aria-pressed={isActive}
             className={[
               'rounded-card border p-4 text-left transition-colors sm:p-5',
-              card.id === 'ditolak' ? 'max-lg:col-span-2' : '',
               isActive
                 ? 'border-brand bg-surface ring-1 ring-brand'
                 : 'border-line bg-surface hover:border-line-strong',

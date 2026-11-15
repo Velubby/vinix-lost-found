@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowRight, Check, CheckCircle2, Clock, MapPin, Ticket, XCircle } from 'lucide-react';
+import { ArrowRight, Check, CheckCircle2, Clock, MapPin, Ticket, XCircle, Archive } from 'lucide-react';
 import QRCode from 'react-qr-code';
 import { formatDate } from '@/lib/date';
 import { fetchLatestUserReport, type ReportEventRow, type UserReportRow, type ClaimRow, type ClaimItemRow } from '@/lib/supabase/reports';
@@ -57,14 +57,16 @@ function getReportProgress(report: Pick<UserReportRow, 'type' | 'status'>, claim
 function getClaimProgress(claim: ClaimRow) {
   const isHandedOver = Boolean(claim.pickup_at);
   const isRejected = claim.status === 'ditolak';
+  const isClosed = claim.status === 'ditutup';
   const isApproved = claim.status === 'disetujui';
-  const statusIndex = claim.status === 'diajukan' ? 0 : isRejected || claim.status === 'ditinjau' ? 1 : isHandedOver ? 3 : 2;
+  const statusIndex = claim.status === 'diajukan' ? 0 : isRejected || isClosed || claim.status === 'ditinjau' ? 1 : isHandedOver ? 3 : 2;
 
   const statusLabel = {
     diajukan: 'Menunggu verifikasi',
     ditinjau: 'Sedang ditinjau',
     disetujui: isHandedOver ? 'Selesai' : 'Klaim disetujui',
     ditolak: 'Klaim ditolak',
+    ditutup: 'Klaim ditutup',
   }[claim.status];
 
   const description = {
@@ -73,10 +75,11 @@ function getClaimProgress(claim: ClaimRow) {
     disetujui: isHandedOver
       ? 'Barang sudah diserahkan. Simpan tiket ini sebagai bukti pengambilan.'
       : `Klaim disetujui. Silakan datang ke ${DEFAULT_PICKUP_LOCATION} pada jam kerja kantor dengan membawa ID card/KTP.`,
-    ditolak: 'Ciri kepemilikan belum cocok dengan barang. Hubungi petugas untuk peninjauan ulang, atau ajukan klaim baru dengan bukti tambahan.',
+    ditolak: 'Ciri kepemilikan belum cocok dengan barang. Kalau barang masih tersedia, kamu bisa mengajukan satu klaim ulang dengan bukti tambahan.',
+    ditutup: 'Klaim ditutup karena barang sudah diklaim dan diserahkan kepada pemohon lain yang terverifikasi.',
   }[claim.status];
 
-  return { statusIndex, statusLabel, description, isApproved, isRejected, isHandedOver };
+  return { statusIndex, statusLabel, description, isApproved, isRejected, isClosed, isHandedOver };
 }
 
 function getClaimTimeline(claim: ClaimRow) {
@@ -103,7 +106,16 @@ function getClaimTimeline(claim: ClaimRow) {
     timeline.push({
       id: 'claim-rejected',
       title: 'Klaim ditolak',
-      description: 'Ciri kepemilikan belum cocok. Barang kembali tampil di katalog temuan.',
+      description: claim.decision_note || 'Ciri kepemilikan belum cocok. Barang kembali tampil di katalog temuan.',
+      created_at: claim.updated_at,
+    });
+  }
+
+  if (claim.status === 'ditutup') {
+    timeline.push({
+      id: 'claim-closed',
+      title: 'Klaim ditutup',
+      description: claim.decision_note || 'Barang sudah diklaim dan diserahkan kepada pemohon lain yang terverifikasi.',
       created_at: claim.updated_at,
     });
   }
@@ -138,12 +150,14 @@ function TrackingStepper({
   statusIndex,
   isFinished,
   isStopped,
+  stopTone = 'danger',
 }: {
   label: string;
   steps: string[];
   statusIndex: number;
   isFinished: boolean;
   isStopped: boolean;
+  stopTone?: 'danger' | 'neutral';
 }) {
   return (
     <ol aria-label={label} className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-2">
@@ -151,6 +165,7 @@ function TrackingStepper({
         const isCurrent = index === statusIndex;
         const isComplete = index < statusIndex || (isCurrent && isFinished);
         const isStopStep = isStopped && isCurrent;
+        const isNeutralStop = isStopStep && stopTone === 'neutral';
         const isFilled = isStopStep || index < statusIndex || (isCurrent && !isStopped);
 
         return (
@@ -158,7 +173,9 @@ function TrackingStepper({
             <span
               aria-hidden="true"
               className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
-                isStopStep
+                isNeutralStop
+                  ? 'bg-surface-muted text-body ring-1 ring-line'
+                  : isStopStep
                   ? 'bg-danger text-inverse'
                   : isFilled
                   ? 'bg-brand text-inverse'
@@ -169,7 +186,9 @@ function TrackingStepper({
             </span>
             <span
               className={`text-xs leading-5 ${
-                isStopStep
+                isNeutralStop
+                  ? 'font-semibold text-body'
+                  : isStopStep
                   ? 'font-semibold text-danger'
                   : isCurrent
                   ? 'font-semibold text-ink'
@@ -180,7 +199,7 @@ function TrackingStepper({
             >
               {step}
               <span className="sr-only">
-                {isStopStep ? ', ditolak' : isComplete ? ', selesai' : isCurrent ? ', tahap saat ini' : ', belum dimulai'}
+                {isStopStep ? (isNeutralStop ? ', ditutup' : ', ditolak') : isComplete ? ', selesai' : isCurrent ? ', tahap saat ini' : ', belum dimulai'}
               </span>
             </span>
           </li>
@@ -264,15 +283,20 @@ function TrackingContent() {
       </div>
     );
 
-    const { statusIndex, statusLabel, description, isApproved, isRejected, isHandedOver } = getClaimProgress(claim);
+    const { statusIndex, statusLabel, description, isApproved, isRejected, isClosed, isHandedOver } = getClaimProgress(claim);
     const timeline = getClaimTimeline(claim);
-    const panelTone = isRejected
+    const itemAvailable = Boolean(claimItem?.status?.toLowerCase().includes('ditemukan'));
+    const panelTone = isClosed
+      ? 'bg-surface-muted border-line'
+      : isRejected
       ? 'bg-danger-soft border-danger/20'
       : isApproved
       ? 'bg-success-soft border-success/20'
       : 'bg-info-soft border-info/20';
-    const titleTone = isRejected ? 'text-danger' : isApproved ? 'text-success' : 'text-info';
-    const pillTone = isRejected
+    const titleTone = isClosed ? 'text-body' : isRejected ? 'text-danger' : isApproved ? 'text-success' : 'text-info';
+    const pillTone = isClosed
+      ? `${STATUS_COLORS.ditutup.bg} ${STATUS_COLORS.ditutup.text} ${STATUS_COLORS.ditutup.border}`
+      : isRejected
       ? `${STATUS_COLORS.ditolak.bg} ${STATUS_COLORS.ditolak.text} ${STATUS_COLORS.ditolak.border}`
       : isApproved
       ? `${STATUS_COLORS.disetujui.bg} ${STATUS_COLORS.disetujui.text} ${STATUS_COLORS.disetujui.border}`
@@ -323,12 +347,21 @@ function TrackingContent() {
             </span>
           </div>
 
-          <TrackingStepper label="Tahapan klaim" steps={CLAIM_STEPS} statusIndex={statusIndex} isFinished={isHandedOver} isStopped={isRejected} />
+          <TrackingStepper
+            label="Tahapan klaim"
+            steps={CLAIM_STEPS}
+            statusIndex={statusIndex}
+            isFinished={isHandedOver}
+            isStopped={isRejected || isClosed}
+            stopTone={isClosed ? 'neutral' : 'danger'}
+          />
 
           <div className={`space-y-4 rounded-surface border p-4 sm:p-5 ${panelTone}`}>
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
               <div className="flex items-start gap-3">
-                {isRejected ? (
+                {isClosed ? (
+                  <Archive className={`mt-0.5 size-5 shrink-0 ${titleTone}`} aria-hidden="true" />
+                ) : isRejected ? (
                   <XCircle className={`mt-0.5 size-5 shrink-0 ${titleTone}`} aria-hidden="true" />
                 ) : isHandedOver ? (
                   <CheckCircle2 className={`mt-0.5 size-5 shrink-0 ${titleTone}`} aria-hidden="true" />
@@ -358,7 +391,26 @@ function TrackingContent() {
               </div>
             )}
 
-            {isRejected && (
+            {(isRejected || isClosed) && claim.decision_note && (
+              <div className="rounded-surface border border-line bg-surface px-4 py-3">
+                <p className="text-[13px] font-semibold text-ink">Catatan dari petugas</p>
+                <p className="mt-1 text-pretty text-[13px] leading-5 text-body">{claim.decision_note}</p>
+              </div>
+            )}
+
+            {isClaimOwner && isRejected && itemAvailable && (
+              <div className="space-y-1.5 rounded-surface border border-line bg-surface px-4 py-3">
+                <p className="text-[13px] font-semibold text-ink">Barang masih tersedia</p>
+                <p className="text-pretty text-[13px] leading-5 text-body">
+                  Kamu bisa mengajukan satu klaim ulang. Jelaskan apa yang berubah atau bukti tambahan yang belum kamu kirim sebelumnya.
+                </p>
+                <Link href={`/barang/${claim.item_id}`} className="btn-secondary mt-1 inline-flex">
+                  Ajukan Klaim Ulang
+                </Link>
+              </div>
+            )}
+
+            {(isRejected || isClosed) && (
               <ContactStaffButton
                 reference={claim.ticket_code}
                 itemTitle={claimItem?.title || claim.item?.title || 'Barang temuan'}

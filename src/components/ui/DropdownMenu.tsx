@@ -14,7 +14,7 @@ import {
 import { Check, ChevronDown, Eye, Filter } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from './Button';
-import type { FilterStatus } from '@/types/claims';
+import type { ClaimStatus, FilterStatus } from '@/types/claims';
 import { STATUS_LABELS } from '@/types/claims';
 
 interface StatusFilterProps {
@@ -45,7 +45,7 @@ export function StatusFilter({ value, onChange, className }: StatusFilterProps) 
           </DropdownMenuLabel>
           <DropdownMenuSeparator className="my-1 h-px bg-line" />
           <DropdownMenuRadioGroup value={value} onValueChange={(val) => onChange(val as FilterStatus)}>
-            {(['semua', 'diajukan', 'ditinjau', 'disetujui', 'ditolak'] as FilterStatus[]).map((status) => (
+            {(['semua', 'diajukan', 'ditinjau', 'disetujui', 'ditolak', 'ditutup'] as FilterStatus[]).map((status) => (
               <DropdownMenuRadioItem
                 key={status}
                 value={status}
@@ -66,7 +66,7 @@ export function StatusFilter({ value, onChange, className }: StatusFilterProps) 
 
 interface ActionMenuProps {
   claimId: string;
-  currentStatus: 'diajukan' | 'ditinjau' | 'disetujui' | 'ditolak';
+  currentStatus: ClaimStatus;
   onView: (claimId: string) => void;
   onUpdate: (claimId: string, status: 'ditinjau' | 'disetujui' | 'ditolak') => void;
   disabled?: boolean;
@@ -83,7 +83,10 @@ const statusActions: Record<string, { label: string; status: 'ditinjau' | 'diset
     { label: 'Tolak Klaim', status: 'ditolak', variant: 'destructive' },
   ],
   disetujui: [],
-  ditolak: [],
+  ditolak: [
+    { label: 'Tinjau Kembali', status: 'ditinjau', variant: 'default' },
+  ],
+  ditutup: [],
 };
 
 export function ActionMenu({ claimId, currentStatus, onView, onUpdate, disabled }: ActionMenuProps) {

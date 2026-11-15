@@ -31,7 +31,8 @@ export type ClaimRow = {
   user_id?: string;
   report_id: string | null;
   item_id: string;
-  status: 'diajukan' | 'ditinjau' | 'disetujui' | 'ditolak';
+  status: 'diajukan' | 'ditinjau' | 'disetujui' | 'ditolak' | 'ditutup';
+  decision_note?: string | null;
   ticket_code: string;
   pickup_location: string | null;
   pickup_at: string | null;
@@ -117,7 +118,7 @@ export async function fetchUserReports() {
       .order('created_at', { ascending: false }),
     supabase
       .from('claims')
-      .select('id, user_id, report_id, item_id, status, ticket_code, pickup_location, pickup_at, reviewed_at, approved_at, created_at, updated_at, item:items!item_id(id, title, location, image_url, status)')
+      .select('id, user_id, report_id, item_id, status, decision_note, ticket_code, pickup_location, pickup_at, reviewed_at, approved_at, created_at, updated_at, item:items!item_id(id, title, location, image_url, status)')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false }),
   ]);
@@ -130,7 +131,8 @@ export async function fetchUserReports() {
     user_id?: string;
     report_id: string | null;
     item_id: string;
-    status: 'diajukan' | 'ditinjau' | 'disetujui' | 'ditolak';
+    status: 'diajukan' | 'ditinjau' | 'disetujui' | 'ditolak' | 'ditutup';
+    decision_note?: string | null;
     ticket_code: string;
     pickup_location: string | null;
     pickup_at: string | null;
@@ -145,6 +147,7 @@ export async function fetchUserReports() {
     report_id: c.report_id,
     item_id: c.item_id,
     status: c.status,
+    decision_note: c.decision_note,
     ticket_code: c.ticket_code,
     pickup_location: c.pickup_location,
     pickup_at: c.pickup_at,

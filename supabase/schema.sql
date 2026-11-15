@@ -14,7 +14,7 @@ end $$;
 
 do $$
 begin
-  create type public.claim_status as enum ('diajukan', 'ditinjau', 'disetujui', 'ditolak');
+  create type public.claim_status as enum ('diajukan', 'ditinjau', 'disetujui', 'ditolak', 'ditutup');
 exception
   when duplicate_object then null;
 end $$;
@@ -72,6 +72,7 @@ create table if not exists public.claims (
   user_id uuid not null references auth.users(id) on delete cascade,
   private_answers text not null,
   contact_phone text not null,
+  decision_note text,
   status public.claim_status not null default 'diajukan',
   ticket_code text not null unique,
   pickup_location text,
@@ -97,6 +98,7 @@ create table if not exists public.report_events (
 );
 
 -- Compatibility alters for existing/new-project application in order
+alter type public.claim_status add value if not exists 'ditutup';
 alter table public.profiles add column if not exists phone text;
 alter table public.profiles add column if not exists department text;
 alter table public.profiles add column if not exists employee_id text;
@@ -110,6 +112,7 @@ alter table public.claims add column if not exists pickup_at timestamptz;
 alter table public.claims add column if not exists reviewed_at timestamptz;
 alter table public.claims add column if not exists approved_at timestamptz;
 alter table public.claims add column if not exists handed_over_at timestamptz;
+alter table public.claims add column if not exists decision_note text;
 alter table public.items add column if not exists source_report_id uuid unique;
 alter table public.items add column if not exists diterima_di_pos boolean default false;
 alter table public.items drop column if exists private_notes;
@@ -594,6 +597,12 @@ begin
     return new;
   end if;
 
+  -- A losing claim is closed by the admin action. The item and its report
+  -- already belong to the winning claim, so this transition changes nothing.
+  if new.status::text = 'ditutup' then
+    return new;
+  end if;
+
   select source_report_id
     into found_report_id
   from public.items
@@ -743,7 +752,7 @@ as $$
   where r.user_id = auth.uid()
     and (p_report_id is null or r.id = p_report_id)
     and (p_ticket_code is null or lower(c.ticket_code) = lower(p_ticket_code))
-  order by c.created_at desc
+  order by (c.status = 'disetujui') desc, c.created_at desc
   limit 1;
 $$;
 

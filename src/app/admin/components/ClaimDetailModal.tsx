@@ -98,7 +98,7 @@ export function ClaimDetailModal({
         </div>
 
         {/* Pickup Location Configuration */}
-        {claim.status !== 'ditolak' && claim.status !== 'disetujui' && (
+        {(claim.status === 'diajukan' || claim.status === 'ditinjau') && (
           <div className="space-y-2 border-t border-line pt-5">
             <TextInput
               id="pickup-input"
@@ -130,6 +130,28 @@ export function ClaimDetailModal({
             </div>
             <p className="pt-1 text-xs leading-5 text-muted">
               Setelah disetujui, pemohon dapat melihat lokasi ini dan mengambil barang pada jam kerja kantor dengan menunjukkan tiket klaim.
+            </p>
+          </div>
+        )}
+
+        {/* Rejected or closed decision */}
+        {(claim.status === 'ditolak' || claim.status === 'ditutup') && (
+          <div
+            className={[
+              'space-y-1.5 rounded-surface border p-4 text-[13px] leading-5 text-body',
+              claim.status === 'ditolak'
+                ? 'border-danger/20 bg-danger-soft'
+                : 'border-line bg-surface-muted',
+            ].join(' ')}
+          >
+            <p className="font-semibold text-ink">
+              {claim.status === 'ditolak' ? 'Klaim ditolak' : 'Klaim ditutup'}
+            </p>
+            <p>{claim.decision_note || 'Tidak ada catatan keputusan yang tersimpan.'}</p>
+            <p className="text-xs text-muted">
+              {claim.status === 'ditolak'
+                ? 'Pemohon dapat mengajukan satu klaim ulang jika barang masih tersedia di katalog.'
+                : 'Klaim ini tidak dapat dibuka kembali karena barang sudah menjadi milik pemohon lain.'}
             </p>
           </div>
         )}
@@ -189,7 +211,7 @@ export function ClaimDetailModal({
             </Button>
           )}
 
-          {claim.status !== 'ditolak' && claim.status !== 'disetujui' && (
+          {claim.status !== 'ditolak' && claim.status !== 'disetujui' && claim.status !== 'ditutup' && (
             <>
               <Button
                 variant="outline"

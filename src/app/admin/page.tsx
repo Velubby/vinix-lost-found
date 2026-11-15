@@ -24,6 +24,8 @@ import { ClaimDetailModal } from './components/ClaimDetailModal';
 import { RejectClaimModal } from './components/RejectClaimModal';
 import { CustodyChainModal } from './components/CustodyChainModal';
 import { LostReportDetailModal } from './components/LostReportDetailModal';
+import { ClaimRejectionFields } from './components/ClaimRejectionFields';
+import { CLAIM_REJECTION_REASONS, composeDecisionNote } from '@/lib/claim-reasons';
 import { DEFAULT_PICKUP_LOCATION, PICKUP_LOCATIONS } from '@/lib/locations';
 
 const QUICK_LOCATIONS = PICKUP_LOCATIONS;
@@ -59,6 +61,8 @@ export default function AdminPage() {
   const [isBulkApproveOpen, setIsBulkApproveOpen] = useState(false);
   const [bulkPickupLocation, setBulkPickupLocation] = useState(DEFAULT_PICKUP_LOCATION);
   const [isBulkRejectOpen, setIsBulkRejectOpen] = useState(false);
+  const [bulkRejectPreset, setBulkRejectPreset] = useState<string>(CLAIM_REJECTION_REASONS[0].value);
+  const [bulkRejectNote, setBulkRejectNote] = useState('');
 
   // Report Modals State
   const [viewingReport, setViewingReport] = useState<LostReport | null>(null);
@@ -155,6 +159,8 @@ export default function AdminPage() {
       setIsBulkApproveOpen(false);
       setIsBulkRejectOpen(false);
       setBulkPickupLocation(DEFAULT_PICKUP_LOCATION);
+      setBulkRejectPreset(CLAIM_REJECTION_REASONS[0].value);
+      setBulkRejectNote('');
     },
     onError: (err) => {
       toast.error(err.message || 'Gagal memperbarui klaim secara massal');
@@ -277,6 +283,7 @@ export default function AdminPage() {
     bulkUpdateMutation.mutate({
       claimIds: selectedIds,
       status: 'ditolak',
+      rejectReason: composeDecisionNote(bulkRejectPreset, bulkRejectNote),
     });
   };
 
@@ -655,7 +662,6 @@ export default function AdminPage() {
         onRejectModalOpen={setRejectingClaim}
         onReopenReview={(claimId) => {
           handleSingleUpdate(claimId, 'ditinjau');
-          setViewingClaim((prev) => (prev ? { ...prev, status: 'ditinjau' } : null));
         }}
         isPending={updateClaimMutation.isPending}
         onMarkHandedOver={handleMarkHandedOver}
@@ -732,17 +738,46 @@ export default function AdminPage() {
         </div>
       </Modal>
 
-      <ConfirmModal
+      <Modal
         open={isBulkRejectOpen}
         onOpenChange={setIsBulkRejectOpen}
         title="Tolak Klaim Terpilih"
-        message={`Apakah Anda yakin ingin menolak ${selectedIds.length} klaim sekaligus? Tindakan ini tidak dapat dibatalkan.`}
-        confirmText={`Tolak ${selectedIds.length} Klaim`}
-        cancelText="Batal"
-        variant="destructive"
-        loading={bulkUpdateMutation.isPending}
-        onConfirm={handleBulkReject}
-      />
+        description={`Alasan yang sama akan dicatat untuk ${selectedIds.length} klaim terpilih.`}
+        size="md"
+      >
+        <div className="space-y-5">
+          <div className="rounded-surface border border-warning/20 bg-warning-soft p-3.5 text-[13px] leading-5 text-body">
+            Pemohon akan melihat alasan ini di halaman lacak. Pastikan alasan sesuai untuk semua klaim yang dipilih.
+          </div>
+
+          <ClaimRejectionFields
+            preset={bulkRejectPreset}
+            note={bulkRejectNote}
+            onPresetChange={setBulkRejectPreset}
+            onNoteChange={setBulkRejectNote}
+            idPrefix="bulk-reject"
+          />
+
+          <div className="flex flex-col-reverse gap-2.5 border-t border-line pt-4 sm:flex-row sm:justify-end">
+            <Button
+              variant="secondary"
+              onClick={() => setIsBulkRejectOpen(false)}
+              disabled={bulkUpdateMutation.isPending}
+              className="w-full sm:w-auto"
+            >
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleBulkReject}
+              loading={bulkUpdateMutation.isPending}
+              className="w-full sm:w-auto"
+            >
+              Tolak {selectedIds.length} Klaim
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <LostReportDetailModal
         report={viewingReport}

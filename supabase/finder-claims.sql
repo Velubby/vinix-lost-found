@@ -50,7 +50,7 @@ as $$
   where r.user_id = auth.uid()
     and (p_report_id is null or r.id = p_report_id)
     and (p_ticket_code is null or lower(c.ticket_code) = lower(p_ticket_code))
-  order by c.created_at desc
+  order by (c.status = 'disetujui') desc, c.created_at desc
   limit 1;
 $$;
 

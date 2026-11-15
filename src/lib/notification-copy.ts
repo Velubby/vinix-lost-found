@@ -2,7 +2,7 @@ import { DEFAULT_PICKUP_LOCATION } from '@/lib/locations';
 import type { ReportStatus } from '@/types/claims';
 
 type ReportType = 'hilang' | 'temuan';
-type ClaimDecisionStatus = 'ditinjau' | 'disetujui' | 'ditolak';
+type ClaimDecisionStatus = 'ditinjau' | 'disetujui' | 'ditolak' | 'ditutup';
 
 export function reportStatusNotification(input: {
   type: ReportType;
@@ -77,6 +77,12 @@ export function claimStatusNotification(input: {
         body: `Klaim pada barang temuan${item} ditolak. Barang tetap menunggu pemilik yang cocok.`,
       };
     }
+    if (status === 'ditutup') {
+      return {
+        title: 'Klaim pada barang temuanmu ditutup',
+        body: `Barang temuan${item} sudah diklaim pemilik lain yang terverifikasi. Tiket ${ticketCode} ditutup.`,
+      };
+    }
     return {
       title: 'Klaim atas barang temuanmu sedang ditinjau',
       body: `Seseorang mengajukan klaim pada barang temuan${item}. Petugas sedang memverifikasi ciri kepemilikannya.`,
@@ -96,6 +102,13 @@ export function claimStatusNotification(input: {
       body: rejectReason
         ? `Klaim ${ticketCode} ditolak. Alasan: ${rejectReason}`
         : `Klaim ${ticketCode} ditolak karena ciri kepemilikan belum cocok. Hubungi petugas kalau kamu punya bukti tambahan.`,
+    };
+  }
+
+  if (status === 'ditutup') {
+    return {
+      title: 'Klaim ditutup',
+      body: `Tiket ${ticketCode} ditutup karena barang sudah diklaim pemohon lain yang terverifikasi. Hubungi petugas kalau kamu punya bukti tambahan.`,
     };
   }
 
