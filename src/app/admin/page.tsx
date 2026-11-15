@@ -22,7 +22,6 @@ import { AdminItemImage } from './components/AdminItemImage';
 import { AdminReportsView } from './components/AdminReportsView';
 import { ClaimDetailModal } from './components/ClaimDetailModal';
 import { RejectClaimModal } from './components/RejectClaimModal';
-import { CustodyChainModal } from './components/CustodyChainModal';
 import { LostReportDetailModal } from './components/LostReportDetailModal';
 import { ClaimRejectionFields } from './components/ClaimRejectionFields';
 import { CLAIM_REJECTION_REASONS, composeDecisionNote } from '@/lib/claim-reasons';
@@ -294,25 +293,17 @@ export default function AdminPage() {
     });
   };
 
-  const handleConfirmMarkFound = async (data: {
-    finderName: string;
-    foundLocation: string;
-    storageLocation: string;
-    note: string;
-  }) => {
+  const handleConfirmMarkFound = async () => {
     if (!markingFoundReport) return;
     setIsUpdatingReport(true);
     try {
       const res = await updateReportStatusAction({
         reportId: markingFoundReport.id,
         status: 'ditemukan',
-        finderName: data.finderName || undefined,
-        foundLocation: data.foundLocation || undefined,
-        storageLocation: data.storageLocation || undefined,
-        note: data.note || undefined,
+        storageLocation: DEFAULT_PICKUP_LOCATION,
       });
       if (res.success) {
-        toast.success('Barang berhasil dicatat & status diubah ke "Ditemukan"');
+        toast.success(`Barang "${markingFoundReport.item_title}" diterima dan disimpan di posko`);
         if (viewingReport && viewingReport.id === markingFoundReport.id) {
           setViewingReport((prev) => (prev ? { ...prev, status: 'ditemukan' } : null));
         }
@@ -372,9 +363,7 @@ export default function AdminPage() {
       const res = await updateReportStatusAction({
         reportId: report.id,
         status: 'ditemukan',
-        finderName: report.reporter?.full_name || 'Pelapor/Petugas',
         storageLocation: DEFAULT_PICKUP_LOCATION,
-        note: 'Barang diterima dan diverifikasi oleh petugas di posko',
       });
 
       if (res.success) {
@@ -787,13 +776,16 @@ export default function AdminPage() {
         getWhatsAppVerificationUrl={getWhatsAppVerificationUrl}
       />
 
-      <CustodyChainModal
-        key={markingFoundReport?.id || 'custody-chain-modal'}
-        report={markingFoundReport}
-        onClose={() => setMarkingFoundReport(null)}
+      <ConfirmModal
+        open={Boolean(markingFoundReport)}
+        onOpenChange={(open) => !open && setMarkingFoundReport(null)}
+        title="Tandai Barang Ditemukan"
+        message={`Barang akan disimpan di ${DEFAULT_PICKUP_LOCATION} dan dicatat telah diterima serta diverifikasi oleh petugas.`}
+        confirmText="Tandai Ditemukan"
+        cancelText="Batal"
+        variant="primary"
+        loading={isUpdatingReport}
         onConfirm={handleConfirmMarkFound}
-        isPending={isUpdatingReport}
-        quickLocations={QUICK_LOCATIONS}
       />
 
       {completingReport && (

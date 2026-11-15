@@ -378,20 +378,12 @@ function TrackingContent() {
                 </div>
               </div>
               {isApproved && !isHandedOver && isClaimOwner && (
-                <div className="shrink-0 rounded-surface border border-line bg-surface p-3">
+                <div className="flex shrink-0 flex-col items-center gap-2 self-center rounded-surface border border-line bg-surface p-3">
                   <QRCode value={claim.ticket_code} size={112} />
-                  <p className="mt-2 text-center text-xs font-medium text-muted">Tunjukkan saat pengambilan</p>
+                  <p className="text-center text-xs font-medium text-muted">Tunjukkan saat pengambilan</p>
                 </div>
               )}
             </div>
-
-            {isApproved && !isHandedOver && (
-              <HandoverInfoCard
-                title="Cara pengambilan barang"
-                location={claim.pickup_location ?? DEFAULT_PICKUP_LOCATION}
-                note="Tunjukkan tiket ini kepada petugas saat verifikasi serah terima."
-              />
-            )}
 
             {(isRejected || isClosed) && claim.decision_note && (
               <div className="rounded-surface border border-line bg-surface px-4 py-3">
@@ -529,7 +521,7 @@ function TrackingContent() {
           <HandoverInfoCard
             title="Serahkan barang temuan ke posko"
             location={DEFAULT_PICKUP_LOCATION}
-            note="Bawa barang dan bukti laporan temuan (nomor laporan) agar petugas bisa menerima dan memverifikasi barang."
+            note="Bawa barang dan nomor laporan ini agar petugas langsung menerima dan memverifikasi barang."
           />
         )}
 
@@ -550,11 +542,12 @@ function TrackingContent() {
             </div>
           </div>
           {shouldVisitPost && (
-            <div className="shrink-0 sm:max-w-sm">
+            <div className="w-full shrink-0 sm:max-w-xs">
               <HandoverInfoCard
                 title="Datang ambil barang"
+                actionLabel="Ambil di"
                 location={report.storage_location ?? DEFAULT_PICKUP_LOCATION}
-                note="Sebutkan ciri khusus barang untuk verifikasi serah terima."
+                note="Sebutkan ciri khusus barang untuk verifikasi."
               />
             </div>
           )}

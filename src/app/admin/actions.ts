@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { createNotification } from '@/lib/supabase/server-notifications';
 import { claimStatusNotification, reportStatusNotification } from '@/lib/notification-copy';
 import { CLAIM_CLOSED_NOTE } from '@/lib/claim-reasons';
+import { DEFAULT_PICKUP_LOCATION } from '@/lib/locations';
 import type { FilterStatus, UpdateClaimInput, BulkUpdateInput, Claim, LostReport, ReportStatus, FilterReportStatus } from '@/types/claims';
 
 const updateClaimSchema = z.object({
@@ -30,9 +31,7 @@ const handoverClaimSchema = z.object({
 const updateReportSchema = z.object({
   reportId: z.string().uuid(),
   status: z.enum(['draf', 'aktif', 'ditemukan', 'klaim', 'selesai']),
-  finderName: z.string().max(100).optional(),
-  foundLocation: z.string().max(200).optional(),
-  storageLocation: z.string().max(200).optional(),
+  storageLocation: z.string().trim().max(200).optional(),
   note: z.string().max(300).optional(),
 });
 
@@ -906,8 +905,6 @@ export async function fetchLostReportsAction(
 export async function updateReportStatusAction(input: {
   reportId: string;
   status: ReportStatus;
-  finderName?: string;
-  foundLocation?: string;
   storageLocation?: string;
   note?: string;
 }): Promise<ActionResult> {
@@ -940,8 +937,10 @@ export async function updateReportStatusAction(input: {
       reportUpdatePayload.diterima_di_pos = true;
     }
 
-    if (parsed.storageLocation) {
-      reportUpdatePayload.storage_location = parsed.storageLocation.trim();
+    const resolvedStorage = parsed.storageLocation?.trim() || DEFAULT_PICKUP_LOCATION;
+
+    if (parsed.status === 'ditemukan') {
+      reportUpdatePayload.storage_location = resolvedStorage;
     }
 
     const { error: updateError } = await supabase
@@ -995,19 +994,9 @@ export async function updateReportStatusAction(input: {
     let eventDescription = parsed.note || `Status laporan diperbarui oleh petugas.`;
 
     if (parsed.status === 'ditemukan') {
-      if (existingReport.type === 'temuan') {
-        eventTitle = 'Barang diterima di pos/penyimpanan';
-        const details = [
-          parsed.finderName ? `Diserahkan oleh: ${parsed.finderName}` : null,
-          parsed.foundLocation ? `Lokasi ditemukan: ${parsed.foundLocation}` : null,
-          parsed.storageLocation ? `Disimpan di: ${parsed.storageLocation}` : null,
-          parsed.note ? `Catatan: ${parsed.note}` : null,
-        ].filter(Boolean).join(' · ');
-        eventDescription = details || 'Barang telah diterima petugas dan siap tampil di katalog untuk diklaim.';
-      } else {
-        eventTitle = 'Barang ditemukan';
-        eventDescription = parsed.note || 'Barang yang sesuai dengan laporan kehilangan telah ditemukan. Petugas akan menghubungi pelapor untuk verifikasi kepemilikan.';
-      }
+      eventTitle = existingReport.type === 'temuan' ? 'Barang diterima di pos/penyimpanan' : 'Barang ditemukan';
+      eventDescription = `Barang telah disimpan di ${reportUpdatePayload.storage_location}, lalu diterima dan diverifikasi oleh petugas.`;
+      if (parsed.note) eventDescription += ` ${parsed.note}`;
     } else if (parsed.status === 'selesai') {
       eventTitle = 'Barang berhasil diverifikasi dan diserahkan';
       eventDescription = parsed.note || 'Ciri kepemilikan telah diverifikasi oleh petugas dan barang telah diserahkan kembali kepada pemilik.';
