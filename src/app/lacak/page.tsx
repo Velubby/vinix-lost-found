@@ -3,13 +3,14 @@
 import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowRight, Check, CheckCircle2, Clock, MapPin, MessageSquare, Ticket, XCircle } from 'lucide-react';
+import { ArrowRight, Check, CheckCircle2, Clock, MapPin, Ticket, XCircle } from 'lucide-react';
 import QRCode from 'react-qr-code';
 import { formatDate } from '@/lib/date';
 import { fetchLatestUserReport, type ReportEventRow, type UserReportRow, type ClaimRow, type ClaimItemRow } from '@/lib/supabase/reports';
 import { DEFAULT_PICKUP_LOCATION, OFFICE_ADDRESS, PICKUP_INSTRUCTIONS } from '@/lib/locations';
 import { REPORT_STATUS_COLORS, STATUS_COLORS } from '@/types/claims';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { ContactStaffButton } from '@/components/ContactStaffButton';
 
 const CLAIM_STEPS = ['Klaim diajukan', 'Verifikasi petugas', 'Klaim disetujui', 'Barang diambil'];
 const CLAIM_STATUS_LABELS: Record<ClaimRow['status'], string> = {
@@ -18,8 +19,6 @@ const CLAIM_STATUS_LABELS: Record<ClaimRow['status'], string> = {
   disetujui: 'Disetujui',
   ditolak: 'Ditolak',
 };
-const CONTACT_EMAIL = 'mailto:lostfound@vinix7.id';
-
 function getReportProgress(report: Pick<UserReportRow, 'type' | 'status'>, claim?: ClaimRow | null) {
   const isFoundReport = report.type === 'temuan';
   // Lost reports are returned directly by staff; they do not go through a
@@ -306,10 +305,10 @@ function TrackingContent() {
                   </select>
                 </label>
               )}
-              <a href={CONTACT_EMAIL} className="btn-secondary">
-                <MessageSquare className="size-4" aria-hidden="true" />
-                <span>Hubungi Petugas</span>
-              </a>
+              <ContactStaffButton
+                reference={claim.ticket_code}
+                itemTitle={claimItem?.title || claim.item?.title || 'Barang temuan'}
+              />
             </>
           }
         />
@@ -364,10 +363,10 @@ function TrackingContent() {
             )}
 
             {isRejected && (
-              <a href={CONTACT_EMAIL} className="btn-secondary">
-                <MessageSquare className="size-4" aria-hidden="true" />
-                <span>Email Petugas</span>
-              </a>
+              <ContactStaffButton
+                reference={claim.ticket_code}
+                itemTitle={claimItem?.title || claim.item?.title || 'Barang temuan'}
+              />
             )}
           </div>
         </div>
@@ -455,10 +454,7 @@ function TrackingContent() {
                 </select>
               </label>
             )}
-            <a href={CONTACT_EMAIL} className="btn-secondary">
-              <MessageSquare className="size-4" aria-hidden="true" />
-              <span>Hubungi Petugas</span>
-            </a>
+            <ContactStaffButton reference={report.report_code} itemTitle={report.item_title} />
           </>
         }
       />

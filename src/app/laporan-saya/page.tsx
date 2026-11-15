@@ -16,7 +16,6 @@ import {
   Clock,
   AlertCircle,
   ShieldCheck,
-  MessageCircle,
   ExternalLink,
   PackageSearch,
   HandHeart,
@@ -36,6 +35,7 @@ import { REPORT_STATUS_COLORS, STATUS_COLORS } from '@/types/claims';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ContactStaffButton } from '@/components/ContactStaffButton';
 
 type CategoryTab = 'hilang' | 'temuan' | 'klaim';
 type FilterStatus = 'semua' | ReportStatus;
@@ -422,14 +422,11 @@ export default function MyReportsPage() {
                         </div>
                       )}
 
-                      <a
-                        href="mailto:lostfound@vinix7.id?subject=Pertanyaan%20Status%20Laporan%20Lost%20%26%20Found"
-                        className="btn-secondary w-full sm:w-56"
-                        title="Hubungi petugas Lost &amp; Found"
-                      >
-                        <MessageCircle className="size-4 text-muted" aria-hidden="true" />
-                        <span>Hubungi Petugas</span>
-                      </a>
+                      <ContactStaffButton
+                        reference={report.report_code}
+                        itemTitle={report.item_title}
+                        className="w-full sm:w-56"
+                      />
                     </div>
                   </div>
                 </article>
