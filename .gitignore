@@ -43,6 +43,7 @@ next-env.d.ts
 
 #skill
 /graphify-out
+/anti-slop
 
 # supabase cli cache & local test artifacts
 /supabase/.temp
