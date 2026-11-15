@@ -60,6 +60,7 @@ create table if not exists public.reports (
   image_urls text[],
   diterima_di_pos boolean default false,
   contact_phone text not null,
+  storage_location text,
   status public.report_status not null default 'aktif',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -106,6 +107,7 @@ alter table public.profiles add column if not exists role text not null default 
 alter table public.reports add column if not exists image_url text;
 alter table public.reports add column if not exists image_urls text[];
 alter table public.reports add column if not exists diterima_di_pos boolean default false;
+alter table public.reports add column if not exists storage_location text;
 alter table public.claims alter column report_id drop not null;
 alter table public.claims add column if not exists pickup_location text;
 alter table public.claims add column if not exists pickup_at timestamptz;

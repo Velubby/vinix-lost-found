@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { ChevronDown, ShieldCheck } from 'lucide-react';
-import { DEFAULT_PICKUP_LOCATION, OFFICE_ADDRESS, OFFICE_NAME } from '@/lib/locations';
+import { DEFAULT_PICKUP_LOCATION, OFFICE_ADDRESS, OFFICE_NAME, OFFICE_HOURS } from '@/lib/locations';
 import { PageHeader } from '@/components/ui/PageHeader';
 
 const GUIDE_STEPS = [
@@ -42,7 +42,7 @@ export default function HelpPage() {
     },
     {
       q: 'Di mana pengambilan barang yang klaimnya disetujui?',
-      a: `Pengambilan dilakukan di ${DEFAULT_PICKUP_LOCATION}, ${OFFICE_NAME} (${OFFICE_ADDRESS}) pada jam kerja kantor. Tunjukkan tiket klaim dan kartu identitas (ID karyawan/KTP) saat verifikasi.`
+      a: `Pengambilan dilakukan di ${DEFAULT_PICKUP_LOCATION}, ${OFFICE_NAME} (${OFFICE_ADDRESS}) pada ${OFFICE_HOURS}. Tunjukkan tiket klaim dan kartu identitas (ID karyawan/KTP) saat verifikasi.`
     }
   ];
 

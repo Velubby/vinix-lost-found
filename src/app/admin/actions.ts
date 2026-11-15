@@ -930,6 +930,7 @@ export async function updateReportStatusAction(input: {
       status: ReportStatus;
       updated_at: string;
       diterima_di_pos?: boolean;
+      storage_location?: string;
     } = {
       status: parsed.status,
       updated_at: new Date().toISOString(),
@@ -937,6 +938,10 @@ export async function updateReportStatusAction(input: {
 
     if (existingReport.type === 'temuan' && parsed.status === 'ditemukan') {
       reportUpdatePayload.diterima_di_pos = true;
+    }
+
+    if (parsed.storageLocation) {
+      reportUpdatePayload.storage_location = parsed.storageLocation.trim();
     }
 
     const { error: updateError } = await supabase

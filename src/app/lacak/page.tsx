@@ -3,11 +3,12 @@
 import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowRight, Check, CheckCircle2, Clock, MapPin, Ticket, XCircle, Archive } from 'lucide-react';
+import { Check, CheckCircle2, Clock, MapPin, Ticket, XCircle, Archive } from 'lucide-react';
 import QRCode from 'react-qr-code';
 import { formatDate } from '@/lib/date';
 import { fetchLatestUserReport, type ReportEventRow, type UserReportRow, type ClaimRow, type ClaimItemRow } from '@/lib/supabase/reports';
-import { DEFAULT_PICKUP_LOCATION, OFFICE_ADDRESS, PICKUP_INSTRUCTIONS } from '@/lib/locations';
+import { DEFAULT_PICKUP_LOCATION, OFFICE_HOURS } from '@/lib/locations';
+import { HandoverInfoCard } from '@/components/HandoverInfoCard';
 import { getClaimStatusLabel, REPORT_STATUS_COLORS, STATUS_COLORS } from '@/types/claims';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ContactStaffButton } from '@/components/ContactStaffButton';
@@ -74,7 +75,7 @@ function getClaimProgress(claim: ClaimRow) {
     ditinjau: 'Petugas sedang memeriksa ciri kepemilikan. Simpan nomor tiket ini sampai proses selesai.',
     disetujui: isHandedOver
       ? 'Barang sudah diserahkan. Simpan tiket ini sebagai bukti pengambilan.'
-      : `Klaim disetujui. Silakan datang ke ${DEFAULT_PICKUP_LOCATION} pada jam kerja kantor dengan membawa ID card/KTP.`,
+      : `Klaim disetujui. Silakan datang ke ${DEFAULT_PICKUP_LOCATION} pada ${OFFICE_HOURS} dengan membawa ID card/KTP.`,
     ditolak: 'Ciri kepemilikan belum cocok dengan barang. Kalau barang masih tersedia, kamu bisa mengajukan satu klaim ulang dengan bukti tambahan.',
     ditutup: 'Klaim ditutup karena barang sudah diklaim dan diserahkan kepada pemohon lain yang terverifikasi.',
   }[claim.status];
@@ -126,7 +127,7 @@ function getClaimTimeline(claim: ClaimRow) {
       timeline.push({
         id: 'claim-approved',
         title: 'Klaim disetujui',
-        description: `Barang menunggu diambil di ${claim.pickup_location ?? DEFAULT_PICKUP_LOCATION} pada jam kerja kantor. Bawa ID card/KTP.`,
+        description: `Barang menunggu diambil di ${claim.pickup_location ?? DEFAULT_PICKUP_LOCATION} pada ${OFFICE_HOURS}. Bawa ID card/KTP.`,
         created_at: approvedAt,
       });
     }
@@ -385,10 +386,11 @@ function TrackingContent() {
             </div>
 
             {isApproved && !isHandedOver && (
-              <div className="space-y-1 rounded-surface border border-success/20 bg-surface px-4 py-3">
-                <p className="text-[13px] font-semibold text-success">Ambil pada jam kerja kantor</p>
-                <p className="text-pretty text-[13px] leading-5 text-body">{PICKUP_INSTRUCTIONS}</p>
-              </div>
+              <HandoverInfoCard
+                title="Cara pengambilan barang"
+                location={claim.pickup_location ?? DEFAULT_PICKUP_LOCATION}
+                note="Tunjukkan tiket ini kepada petugas saat verifikasi serah terima."
+              />
             )}
 
             {(isRejected || isClosed) && claim.decision_note && (
@@ -523,6 +525,14 @@ function TrackingContent() {
 
         <TrackingStepper label="Tahapan laporan" steps={steps} statusIndex={statusIndex} isFinished={report.status === 'selesai'} isStopped={false} />
 
+        {report.type === 'temuan' && report.status === 'aktif' && (
+          <HandoverInfoCard
+            title="Serahkan barang temuan ke posko"
+            location={DEFAULT_PICKUP_LOCATION}
+            note="Bawa barang dan bukti laporan temuan (nomor laporan) agar petugas bisa menerima dan memverifikasi barang."
+          />
+        )}
+
         <div className={`flex flex-col justify-between gap-4 rounded-surface border p-4 sm:flex-row sm:items-center sm:p-5 ${reportTone.bg} ${reportTone.border}`}>
           <div className="flex items-start gap-3 sm:items-center">
             <CheckCircle2 className={`mt-0.5 size-5 shrink-0 sm:mt-0 ${reportTone.text}`} aria-hidden="true" />
@@ -540,12 +550,12 @@ function TrackingContent() {
             </div>
           </div>
           {shouldVisitPost && (
-            <div className="shrink-0 space-y-1 rounded-surface border border-line bg-surface px-4 py-3 sm:max-w-xs">
-              <p className="text-sm font-semibold text-ink">Datang ke {DEFAULT_PICKUP_LOCATION}</p>
-              <p className="text-pretty text-[13px] leading-5 text-body">Lokasi kantor: {OFFICE_ADDRESS}. Bawa ID card/KTP dan sebutkan ciri khusus barang untuk verifikasi serah terima.</p>
-              <Link href="/bantuan" className="inline-flex min-h-9 items-center gap-1.5 text-[13px] font-semibold text-accent transition-colors hover:text-brand">
-                Panduan pengambilan <ArrowRight className="size-3.5" aria-hidden="true" />
-              </Link>
+            <div className="shrink-0 sm:max-w-sm">
+              <HandoverInfoCard
+                title="Datang ambil barang"
+                location={report.storage_location ?? DEFAULT_PICKUP_LOCATION}
+                note="Sebutkan ciri khusus barang untuk verifikasi serah terima."
+              />
             </div>
           )}
         </div>

@@ -3,7 +3,8 @@
 import { Suspense, useEffect, useLayoutEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ShieldAlert, Upload, Camera, CheckCircle2, ArrowRight, ArrowLeft, Copy, CheckCheck, X, Check, Info } from 'lucide-react';
-import { OFFICE_LOCATIONS } from '@/lib/locations';
+import { OFFICE_LOCATIONS, DEFAULT_PICKUP_LOCATION } from '@/lib/locations';
+import { HandoverInfoCard } from '@/components/HandoverInfoCard';
 import {
   Dialog,
   DialogPortal,
@@ -973,7 +974,9 @@ function ReportForm() {
                 Laporan Anda Telah Terdaftar
               </DialogTitle>
               <DialogDescription className="mx-auto mt-1 max-w-sm text-[13px] leading-5 text-body">
-                Petugas posko keamanan akan memverifikasi dan mencocokkan ciri barang Anda di sistem kantor.
+                {reportType === 'temuan'
+                  ? 'Serahkan barang ke posko sesuai waktu layanan; petugas akan memverifikasi sebelum barang tampil di katalog.'
+                  : 'Petugas posko keamanan akan memverifikasi dan mencocokkan ciri barang Anda di sistem kantor.'}
               </DialogDescription>
             </div>
 
@@ -1014,6 +1017,14 @@ function ReportForm() {
                 )}
               </Button>
             </div>
+
+            {reportType === 'temuan' && (
+              <HandoverInfoCard
+                title="Cara menyerahkan barang"
+                location={DEFAULT_PICKUP_LOCATION}
+                note="Bawa barang dan nomor laporan ini agar petugas langsung menerima dan memverifikasi barang."
+              />
+            )}
 
             <div className="flex flex-col justify-center gap-2.5 pt-2 sm:flex-row">
               <Button

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { ArrowRight, Check, Copy, ExternalLink, Mail, MapPin, MessageCircle, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
-import { DEFAULT_PICKUP_LOCATION, OFFICE_ADDRESS, OFFICE_NAME } from '@/lib/locations';
+import { DEFAULT_PICKUP_LOCATION, OFFICE_ADDRESS, OFFICE_NAME, OFFICE_HOURS } from '@/lib/locations';
 
 const CONTACT_EMAIL = 'lostfound@vinix7.id';
 
@@ -200,7 +200,7 @@ export function ContactStaffButton({
                   {OFFICE_ADDRESS}
                 </p>
                 <p className="text-pretty text-[13px] leading-5 text-body">
-                  Titik pengambilan: {DEFAULT_PICKUP_LOCATION}. Datang pada jam kerja kantor dengan membawa ID card/KTP.
+                  Titik pengambilan: {DEFAULT_PICKUP_LOCATION}. Datang pada {OFFICE_HOURS} dengan membawa ID card/KTP.
                 </p>
                 <p className="text-pretty text-xs leading-5 text-muted">
                   Waktu penanganan mengikuti ketersediaan petugas.

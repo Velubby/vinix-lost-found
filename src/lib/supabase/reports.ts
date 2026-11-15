@@ -14,6 +14,7 @@ export type UserReportRow = {
   image_url: string | null;
   image_urls: string[] | null;
   diterima_di_pos: boolean;
+  storage_location: string | null;
   status: ReportStatus;
   created_at: string;
   updated_at: string;
@@ -112,7 +113,7 @@ export async function fetchUserReports() {
   const [{ data: reports, error: reportsError }, { data: claims, error: claimsError }] = await Promise.all([
     supabase
       .from('reports')
-      .select('id, report_code, type, item_title, category, location, incident_at, public_description, image_url, image_urls, diterima_di_pos, status, created_at, updated_at')
+      .select('id, report_code, type, item_title, category, location, incident_at, public_description, image_url, image_urls, diterima_di_pos, storage_location, status, created_at, updated_at')
       .eq('user_id', user.id)
       .neq('status', 'draf')
       .order('created_at', { ascending: false }),
