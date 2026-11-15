@@ -4,14 +4,15 @@ import { useState, useEffect, Suspense } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, MapPin, Calendar, Clock, ShieldCheck, CheckCircle2 } from 'lucide-react';
-import { fetchCatalogItemById, submitItemClaim, type CatalogItem } from '@/lib/supabase/items';
+import { ArrowLeft, MapPin, Calendar, Clock, ShieldCheck, CheckCircle2, Ticket } from 'lucide-react';
+import { fetchActiveItemClaim, fetchCatalogItemById, submitItemClaim, type ActiveItemClaim, type CatalogItem } from '@/lib/supabase/items';
 import { getCurrentUser, getUserProfile } from '@/lib/supabase/auth';
 import { validateIndonesianPhone, sanitizePhoneInput, validateCiriKhusus } from '@/lib/validation';
 import { getItemStatusLabel } from '@/types/claims';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { ContactStaffButton } from '@/components/ContactStaffButton';
 
 function statusTone(status: string) {
   const value = status.toLowerCase();
@@ -38,12 +39,27 @@ function ItemDetailContent() {
       .catch(() => setItemError('Detail barang belum dapat dimuat.'));
   }, [itemId]);
 
+  useEffect(() => {
+    let cancelled = false;
+    getCurrentUser()
+      .then(async (user) => {
+        if (!user) return;
+        const claim = await fetchActiveItemClaim(itemId, user.id);
+        if (!cancelled) setActiveClaim(claim);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [itemId]);
+
   // Modal claim state
   const [isClaimModalOpen, setIsClaimModalOpen] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(false);
   const [isSubmittingClaim, setIsSubmittingClaim] = useState(false);
   const [claimSubmitted, setClaimSubmitted] = useState(false);
   const [claimError, setClaimError] = useState('');
+  const [activeClaim, setActiveClaim] = useState<ActiveItemClaim | null>(null);
   const [claimAnswers, setClaimAnswers] = useState({
     ciriKhusus: '',
     isiBarang: '',
@@ -52,6 +68,10 @@ function ItemDetailContent() {
 
   const handleOpenClaim = async () => {
     if (isCheckingAuth) return;
+    if (activeClaim) {
+      router.push(`/lacak?ticket=${activeClaim.ticket_code}`);
+      return;
+    }
     setIsCheckingAuth(true);
 
     try {
@@ -159,8 +179,10 @@ function ItemDetailContent() {
       return;
     } catch (error) {
       if (error instanceof Error && error.message === 'DUPLICATE_CLAIM') {
-        setClaimError('Kamu sudah punya klaim aktif untuk barang ini. Cek tiket di halaman Lacak.');
-        toast.error('Kamu sudah punya klaim aktif untuk barang ini.');
+        const existingClaim = await fetchActiveItemClaim(item.id, user.id).catch(() => null);
+        setActiveClaim(existingClaim);
+        setIsClaimModalOpen(false);
+        toast.error('Kamu sudah punya klaim aktif untuk barang ini. Buka tiket klaim untuk melihat statusnya.');
       } else {
         setClaimError('Klaim belum dapat disimpan. Coba lagi nanti.');
         toast.error('Klaim belum dapat disimpan. Coba lagi nanti.');
@@ -278,22 +300,39 @@ function ItemDetailContent() {
               </p>
             </div>
 
-            <Button
-              type="button"
-              onClick={handleOpenClaim}
-              disabled={isCheckingAuth}
-              loading={isCheckingAuth}
-              className="w-full"
-              size="lg"
-            >
-              {!isCheckingAuth && <ShieldCheck className="size-4" aria-hidden="true" />}
-              <span>{isCheckingAuth ? 'Memeriksa akun...' : 'Ajukan Klaim Kepemilikan'}</span>
-            </Button>
+            {activeClaim ? (
+              <div className="space-y-2.5">
+                <p className="text-pretty text-[13px] leading-5 text-body">
+                  Kamu sudah punya klaim aktif untuk barang ini dengan tiket{' '}
+                  <span className="font-semibold tabular-nums text-ink">{activeClaim.ticket_code}</span>.
+                </p>
+                <Link
+                  href={`/lacak?ticket=${activeClaim.ticket_code}`}
+                  className="btn-primary w-full"
+                >
+                  <Ticket className="size-4" aria-hidden="true" />
+                  <span>Buka Tiket Klaim</span>
+                </Link>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                onClick={handleOpenClaim}
+                disabled={isCheckingAuth}
+                loading={isCheckingAuth}
+                className="w-full"
+                size="lg"
+              >
+                {!isCheckingAuth && <ShieldCheck className="size-4" aria-hidden="true" />}
+                <span>{isCheckingAuth ? 'Memeriksa akun...' : 'Ajukan Klaim Kepemilikan'}</span>
+              </Button>
+            )}
           </div>
 
-          <p className="text-center text-xs leading-5 text-muted">
-            Butuh bantuan langsung? Hubungi petugas melalui email layanan kantor.
-          </p>
+          <div className="space-y-2 text-center">
+            <p className="text-xs leading-5 text-muted">Butuh bantuan sebelum mengajukan klaim?</p>
+            <ContactStaffButton itemTitle={item.title} className="w-full" />
+          </div>
         </div>
       </div>
 

@@ -1,13 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import {
   Plus,
   FileEdit,
-  Trash2,
   MapPin,
   Tag,
   Copy,
@@ -38,13 +37,12 @@ import {
   REPORT_TYPE_STATUS_LABELS,
   STATUS_COLORS,
 } from '@/types/claims';
-import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ContactStaffButton } from '@/components/ContactStaffButton';
 
 type CategoryTab = 'hilang' | 'temuan' | 'klaim';
-type FilterStatus = 'semua' | ReportStatus;
+type FilterStatus = 'semua' | Exclude<ReportStatus, 'draf'>;
 
 const CATEGORY_TABS: Array<{
   id: CategoryTab;
@@ -68,9 +66,11 @@ const CATEGORY_TABS: Array<{
   },
 ];
 
-export default function MyReportsPage() {
+function MyReportsContent() {
   const router = useRouter();
-  const [categoryTab, setCategoryTab] = useState<CategoryTab>('hilang');
+  const searchParams = useSearchParams();
+  const initialTab: CategoryTab = searchParams.get('tab') === 'klaim' ? 'klaim' : 'hilang';
+  const [categoryTab, setCategoryTab] = useState<CategoryTab>(initialTab);
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('semua');
   const [reports, setReports] = useState<UserReportRow[]>([]);
   const [claims, setClaims] = useState<ClaimRow[]>([]);
@@ -79,10 +79,11 @@ export default function MyReportsPage() {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   useEffect(() => {
+    const nextPath = initialTab === 'klaim' ? '/laporan-saya?tab=klaim' : '/laporan-saya';
     fetchUserReports()
       .then(({ user, reports: userReports, claims: userClaims }) => {
         if (!user) {
-          router.replace('/masuk?next=/laporan-saya');
+          router.replace(`/masuk?${new URLSearchParams({ next: nextPath })}`);
           return;
         }
         setReports(userReports);
@@ -90,7 +91,7 @@ export default function MyReportsPage() {
       })
       .catch(() => setError('Laporan belum dapat dimuat. Coba muat ulang halaman.'))
       .finally(() => setIsLoading(false));
-  }, [router]);
+  }, [router, initialTab]);
 
   const handleCopyCode = (code: string) => {
     navigator.clipboard.writeText(code);
@@ -99,20 +100,9 @@ export default function MyReportsPage() {
     setTimeout(() => setCopiedCode(null), 2000);
   };
 
-  const deleteDraft = async (reportId: string) => {
-    const { createClient } = await import('@/lib/supabase/client');
-    const { error: deleteError } = await createClient().from('reports').delete().eq('id', reportId);
-    if (deleteError) {
-      toast.error('Draf belum dapat dihapus.');
-      return;
-    }
-    toast.success('Draf laporan berhasil dihapus.');
-    setReports((current) => current.filter((report) => report.id !== reportId));
-  };
-
   // Counts per Category
-  const lostReports = useMemo(() => reports.filter((r) => r.type === 'hilang'), [reports]);
-  const foundReports = useMemo(() => reports.filter((r) => r.type === 'temuan'), [reports]);
+  const lostReports = useMemo(() => reports.filter((r) => r.type === 'hilang' && r.status !== 'draf'), [reports]);
+  const foundReports = useMemo(() => reports.filter((r) => r.type === 'temuan' && r.status !== 'draf'), [reports]);
 
   const activeLostCount = useMemo(() => lostReports.filter((r) => r.status === 'aktif' || r.status === 'ditemukan').length, [lostReports]);
   const activeFoundCount = useMemo(() => foundReports.filter((r) => r.status === 'aktif' || r.status === 'ditemukan').length, [foundReports]);
@@ -223,7 +213,7 @@ export default function MyReportsPage() {
         <section aria-label="Filter Status Laporan" className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <span className="mr-1 text-xs font-semibold text-muted">Status:</span>
-            {(['semua', 'aktif', 'ditemukan', 'selesai', 'draf'] as FilterStatus[]).map((st) => {
+            {(['semua', 'aktif', 'ditemukan', 'selesai'] as FilterStatus[]).map((st) => {
               const statusLabels = REPORT_TYPE_STATUS_LABELS[categoryTab === 'temuan' ? 'temuan' : 'hilang'];
               const label = st === 'semua' ? 'Semua Status' : statusLabels[st];
               const count = st === 'semua' ? currentCategoryReports.length : currentCategoryReports.filter((r) => r.status === st).length;
@@ -379,30 +369,12 @@ export default function MyReportsPage() {
 
                     {/* Action buttons */}
                     <div className="flex w-full shrink-0 flex-wrap items-center gap-2 border-t border-line pt-3 sm:flex-col sm:items-end lg:w-auto lg:border-t-0 lg:pt-0">
-                      {report.status !== 'draf' && (
-                        <Link
-                          href={`/lacak?report=${report.id}`}
-                          className="btn-primary w-full sm:w-56"
-                        >
-                          <span>Lacak Status &amp; Linimasa</span>
-                        </Link>
-                      )}
-
-                      {report.status === 'draf' && (
-                        <div className="flex w-full items-center gap-2 sm:w-auto">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => deleteDraft(report.id)}
-                            className="min-h-10 border-danger/30 text-danger hover:bg-danger-soft"
-                            title="Hapus draf laporan"
-                          >
-                            <Trash2 className="mr-1 size-4" aria-hidden="true" />
-                            <span>Hapus Draf</span>
-                          </Button>
-                        </div>
-                      )}
+                      <Link
+                        href={`/lacak?report=${report.id}`}
+                        className="btn-primary w-full sm:w-56"
+                      >
+                        <span>Lacak Status &amp; Linimasa</span>
+                      </Link>
 
                       <ContactStaffButton
                         reference={report.report_code}
@@ -569,5 +541,19 @@ export default function MyReportsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function MyReportsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-7xl px-4 py-20 text-center text-sm text-muted sm:px-6 lg:px-8">
+          Memuat riwayat laporan dan tiket...
+        </div>
+      }
+    >
+      <MyReportsContent />
+    </Suspense>
   );
 }

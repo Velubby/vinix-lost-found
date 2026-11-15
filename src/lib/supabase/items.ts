@@ -76,6 +76,25 @@ export async function fetchCatalogItemById(id: string): Promise<CatalogItem | nu
   return mapItem(data as ItemRow);
 }
 
+export type ActiveItemClaim = {
+  id: string;
+  ticket_code: string;
+  status: string;
+};
+
+export async function fetchActiveItemClaim(itemId: string, userId: string): Promise<ActiveItemClaim | null> {
+  const { data, error } = await createClient()
+    .from('claims')
+    .select('id, ticket_code, status')
+    .eq('item_id', itemId)
+    .eq('user_id', userId)
+    .in('status', ['diajukan', 'ditinjau', 'disetujui'])
+    .maybeSingle();
+
+  if (error) throw error;
+  return data ?? null;
+}
+
 export async function submitItemClaim(input: {
   itemId: string;
   userId: string;

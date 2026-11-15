@@ -113,6 +113,7 @@ export async function fetchUserReports() {
       .from('reports')
       .select('id, report_code, type, item_title, category, location, incident_at, public_description, image_url, image_urls, diterima_di_pos, status, created_at, updated_at')
       .eq('user_id', user.id)
+      .neq('status', 'draf')
       .order('created_at', { ascending: false }),
     supabase
       .from('claims')

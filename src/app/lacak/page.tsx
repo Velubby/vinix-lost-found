@@ -216,6 +216,7 @@ function TrackingContent() {
   // Accept legacy ?id= (old notification links) as alias for ?report=
   const requestedReportId = searchParams.get('report') || searchParams.get('id') || undefined;
   const requestedTicket = searchParams.get('ticket') || undefined;
+  const queryString = searchParams.toString();
   const [report, setReport] = useState<UserReportRow | null>(null);
   const [reports, setReports] = useState<UserReportRow[]>([]);
   const [claims, setClaims] = useState<ClaimRow[]>([]);
@@ -232,7 +233,8 @@ function TrackingContent() {
     fetchLatestUserReport(requestedReportId, requestedTicket)
       .then((result) => {
         if (!result.user) {
-          router.replace('/masuk?next=/lacak');
+          const nextPath = queryString ? `/lacak?${queryString}` : '/lacak';
+          router.replace(`/masuk?${new URLSearchParams({ next: nextPath })}`);
           return;
         }
         setReports(result.reports);
@@ -245,7 +247,7 @@ function TrackingContent() {
       })
       .catch(() => setError('Status laporan belum dapat dimuat.'))
       .finally(() => setIsLoading(false));
-  }, [router, requestedReportId, requestedTicket]);
+  }, [router, requestedReportId, requestedTicket, queryString]);
 
   if (isLoading) return <div className="mx-auto max-w-6xl px-4 py-16 text-center text-sm text-muted">Memuat status laporan...</div>;
   if (error) return <div role="alert" className="mx-auto max-w-6xl px-4 py-16 text-center text-sm text-danger">{error}</div>;

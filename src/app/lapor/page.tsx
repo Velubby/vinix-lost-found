@@ -164,7 +164,7 @@ function ReportForm() {
     namaPelapor: '',
     email: '',
     telepon: '',
-    setuju: true
+    setuju: false
   }));
 
   useEffect(() => {
@@ -283,7 +283,7 @@ function ReportForm() {
       namaPelapor: current.namaPelapor,
       email: current.email,
       telepon: current.telepon,
-      setuju: true,
+      setuju: false,
     }));
     setUseCustomLocation(false);
     setCurrentStep(1);
@@ -437,7 +437,7 @@ function ReportForm() {
         ...getJakartaDateTime(),
         deskripsiPublik: '',
         ciriRahasia: '',
-        setuju: true
+        setuju: false
       }));
       clearPhotos();
       setCurrentStep(1);
