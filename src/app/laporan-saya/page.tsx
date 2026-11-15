@@ -31,7 +31,13 @@ import {
   type ClaimRow,
   type ReportStatus,
 } from '@/lib/supabase/reports';
-import { REPORT_STATUS_COLORS, STATUS_COLORS } from '@/types/claims';
+import {
+  getClaimStatusLabel,
+  getReportStatusLabel,
+  REPORT_STATUS_COLORS,
+  REPORT_TYPE_STATUS_LABELS,
+  STATUS_COLORS,
+} from '@/types/claims';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -39,30 +45,6 @@ import { ContactStaffButton } from '@/components/ContactStaffButton';
 
 type CategoryTab = 'hilang' | 'temuan' | 'klaim';
 type FilterStatus = 'semua' | ReportStatus;
-
-const REPORT_STATUS_LABELS: Record<UserReportRow['type'], Record<ReportStatus, string>> = {
-  hilang: {
-    aktif: 'Dalam Pencarian',
-    ditemukan: 'Ditemukan di Posko',
-    selesai: 'Selesai (Diserahkan)',
-    klaim: 'Proses Klaim',
-    draf: 'Draf',
-  },
-  temuan: {
-    aktif: 'Menunggu Penyerahan',
-    ditemukan: 'Menunggu Klaim',
-    selesai: 'Selesai (Diserahkan)',
-    klaim: 'Verifikasi Klaim',
-    draf: 'Draf',
-  },
-};
-
-const CLAIM_STATUS_LABELS: Record<ClaimRow['status'], string> = {
-  diajukan: 'Menunggu Verifikasi',
-  ditinjau: 'Sedang Ditinjau',
-  disetujui: 'Disetujui · Siap Diambil',
-  ditolak: 'Ditolak',
-};
 
 const CATEGORY_TABS: Array<{
   id: CategoryTab;
@@ -242,7 +224,7 @@ export default function MyReportsPage() {
           <div className="flex flex-wrap items-center gap-2">
             <span className="mr-1 text-xs font-semibold text-muted">Status:</span>
             {(['semua', 'aktif', 'ditemukan', 'selesai', 'draf'] as FilterStatus[]).map((st) => {
-              const statusLabels = REPORT_STATUS_LABELS[categoryTab === 'temuan' ? 'temuan' : 'hilang'];
+              const statusLabels = REPORT_TYPE_STATUS_LABELS[categoryTab === 'temuan' ? 'temuan' : 'hilang'];
               const label = st === 'semua' ? 'Semua Status' : statusLabels[st];
               const count = st === 'semua' ? currentCategoryReports.length : currentCategoryReports.filter((r) => r.status === st).length;
 
@@ -363,7 +345,7 @@ export default function MyReportsPage() {
                             className={`inline-flex items-center gap-1.5 rounded-pill border px-2.5 py-0.5 text-[11px] font-semibold ${statusTone.bg} ${statusTone.text} ${statusTone.border}`}
                           >
                             <span className={`size-1.5 rounded-full ${statusTone.dot}`} aria-hidden="true" />
-                            {REPORT_STATUS_LABELS[report.type][report.status]}
+                            {getReportStatusLabel(report.type, report.status)}
                           </span>
                         </div>
 
@@ -471,7 +453,7 @@ export default function MyReportsPage() {
                   className="rounded-card border border-line bg-surface p-5 sm:p-6"
                 >
                   {/* Approval notification box */}
-                  {claim.status === 'disetujui' && (
+                  {claim.status === 'disetujui' && !claim.pickup_at && (
                     <div className="mb-4 flex items-start gap-3 rounded-surface border border-success/20 bg-success-soft p-4">
                       <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-success" aria-hidden="true" />
                       <div className="space-y-0.5">
@@ -480,6 +462,20 @@ export default function MyReportsPage() {
                         </strong>
                         <span className="block text-pretty text-[13px] leading-5 text-body">
                           Lokasi pengambilan: <strong className="font-semibold text-ink">{claim.pickup_location || 'Resepsionis / Lobi Utama VINIX7'}</strong>. Bawa ID card/KTP dan tunjukkan tiket ini kepada petugas.
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {claim.pickup_at && (
+                    <div className="mb-4 flex items-start gap-3 rounded-surface border border-line bg-surface-muted p-4">
+                      <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-success" aria-hidden="true" />
+                      <div className="space-y-0.5">
+                        <strong className="block text-[13px] font-semibold text-ink">
+                          Barang sudah diambil.
+                        </strong>
+                        <span className="block text-pretty text-[13px] leading-5 text-body">
+                          Serah terima selesai pada {formatDate(claim.pickup_at)}. Simpan tiket ini sebagai bukti pengambilan.
                         </span>
                       </div>
                     </div>
@@ -508,7 +504,7 @@ export default function MyReportsPage() {
                           className={`inline-flex items-center gap-1.5 rounded-pill border px-2.5 py-0.5 text-[11px] font-semibold ${statusTone.bg} ${statusTone.text} ${statusTone.border}`}
                         >
                           <span className={`size-1.5 rounded-full ${statusTone.dot}`} aria-hidden="true" />
-                          {CLAIM_STATUS_LABELS[claim.status]}
+                          {getClaimStatusLabel(claim.status, claim.pickup_at)}
                         </span>
 
                         <span className="text-xs text-muted">

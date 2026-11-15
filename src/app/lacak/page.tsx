@@ -8,17 +8,11 @@ import QRCode from 'react-qr-code';
 import { formatDate } from '@/lib/date';
 import { fetchLatestUserReport, type ReportEventRow, type UserReportRow, type ClaimRow, type ClaimItemRow } from '@/lib/supabase/reports';
 import { DEFAULT_PICKUP_LOCATION, OFFICE_ADDRESS, PICKUP_INSTRUCTIONS } from '@/lib/locations';
-import { REPORT_STATUS_COLORS, STATUS_COLORS } from '@/types/claims';
+import { getClaimStatusLabel, REPORT_STATUS_COLORS, STATUS_COLORS } from '@/types/claims';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ContactStaffButton } from '@/components/ContactStaffButton';
 
 const CLAIM_STEPS = ['Klaim diajukan', 'Verifikasi petugas', 'Klaim disetujui', 'Barang diambil'];
-const CLAIM_STATUS_LABELS: Record<ClaimRow['status'], string> = {
-  diajukan: 'Menunggu verifikasi',
-  ditinjau: 'Sedang ditinjau',
-  disetujui: 'Disetujui',
-  ditolak: 'Ditolak',
-};
 function getReportProgress(report: Pick<UserReportRow, 'type' | 'status'>, claim?: ClaimRow | null) {
   const isFoundReport = report.type === 'temuan';
   // Lost reports are returned directly by staff; they do not go through a
@@ -483,7 +477,7 @@ function TrackingContent() {
               <p className="mt-1 text-pretty text-[13px] leading-5 text-body">{description}</p>
               {claim && (
                 <p className="mt-1 text-[13px] leading-5 text-body">
-                  Status klaim: {CLAIM_STATUS_LABELS[claim.status]} · Tiket pengambilan: <span className="tabular-nums">{claim.ticket_code}</span>{' '}
+                  Status klaim: {getClaimStatusLabel(claim.status, claim.pickup_at)} · Tiket pengambilan: <span className="tabular-nums">{claim.ticket_code}</span>{' '}
                   <Link href={`/lacak?ticket=${claim.ticket_code}`} className="font-semibold text-accent underline decoration-accent/40 underline-offset-2 transition-colors hover:text-brand">
                     Lihat tiket
                   </Link>

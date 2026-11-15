@@ -55,6 +55,53 @@ export type ClaimItemRow = {
   status: string;
 };
 
+type FinderClaimRow = {
+  id: string;
+  item_id: string;
+  report_id: string | null;
+  status: ClaimRow['status'];
+  ticket_code: string;
+  pickup_location: string | null;
+  pickup_at: string | null;
+  reviewed_at: string | null;
+  approved_at: string | null;
+  created_at: string;
+  updated_at: string;
+  is_claim_owner: boolean;
+};
+
+// The claims RLS policy hides a claim from the finder who handed in the item.
+// This RPC returns only the safe claim fields for the finder's own report.
+async function fetchFinderClaim(params: { reportId?: string; ticketCode?: string }) {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc('get_my_found_report_claim', {
+    p_report_id: params.reportId ?? null,
+    p_ticket_code: params.ticketCode ?? null,
+  });
+
+  if (error || !data) return null;
+
+  const row = (Array.isArray(data) ? data[0] : data) as FinderClaimRow | undefined;
+  if (!row) return null;
+
+  const claim: ClaimRow = {
+    id: row.id,
+    report_id: row.report_id,
+    item_id: row.item_id,
+    status: row.status,
+    ticket_code: row.ticket_code,
+    pickup_location: row.pickup_location,
+    pickup_at: row.pickup_at,
+    reviewed_at: row.reviewed_at,
+    approved_at: row.approved_at,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    item: null,
+  };
+
+  return { claim, isClaimOwner: row.is_claim_owner };
+}
+
 export async function fetchUserReports() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -138,43 +185,20 @@ export async function fetchLatestUserReport(reportId?: string, ticketCode?: stri
   if (ticketCode && user) {
     const ownTicket = claims.find((item) => item.ticket_code.toLowerCase() === ticketCode.toLowerCase());
     if (!ownTicket) {
-      const { data: ticketData } = await supabase
-        .from('claims')
-        .select('id, user_id, report_id, item_id, status, ticket_code, pickup_location, pickup_at, reviewed_at, approved_at, created_at, updated_at, item:items!item_id(id, title, location, image_url, status)')
-        .ilike('ticket_code', ticketCode)
-        .maybeSingle();
-      if (ticketData) {
-        const c = ticketData as unknown as {
-          id: string; user_id?: string; report_id: string | null; item_id: string;
-          status: ClaimRow['status']; ticket_code: string; pickup_location: string | null; pickup_at: string | null;
-          reviewed_at: string | null;
-          approved_at: string | null;
-          created_at: string; updated_at: string;
-          item: ClaimRow['item'] | Array<{ id?: string; title: string; location: string; image_url: string | null; status: string }> | null;
-        };
-        const mapped: ClaimRow = {
-          id: c.id,
-          user_id: c.user_id,
-          report_id: c.report_id,
-          item_id: c.item_id,
-          status: c.status,
-          ticket_code: c.ticket_code,
-          pickup_location: c.pickup_location,
-          pickup_at: c.pickup_at,
-          reviewed_at: c.reviewed_at,
-          approved_at: c.approved_at,
-          created_at: c.created_at,
-          updated_at: c.updated_at,
-          item: Array.isArray(c.item) ? (c.item[0] as ClaimRow['item']) || null : (c.item as ClaimRow['item']) || null,
-        };
-        const { data: claimItem } = await supabase.from('items').select('id, title, location, status').eq('id', mapped.item_id).maybeSingle();
+      const finderClaim = await fetchFinderClaim({ ticketCode });
+      if (finderClaim) {
+        const { data: claimItem } = await supabase
+          .from('items')
+          .select('id, title, location, status')
+          .eq('id', finderClaim.claim.item_id)
+          .maybeSingle();
         return {
           user, reports, claims,
           report: null as UserReportRow | null,
           events: [] as ReportEventRow[],
-          claim: mapped,
+          claim: finderClaim.claim,
           claimItem: (claimItem || null) as ClaimItemRow | null,
-          isClaimOwner: c.user_id === user.id,
+          isClaimOwner: finderClaim.isClaimOwner,
         };
       }
     }
@@ -191,48 +215,20 @@ export async function fetchLatestUserReport(reportId?: string, ticketCode?: stri
     return { user, reports, claims, report: null as UserReportRow | null, events: [] as ReportEventRow[], claim, claimItem: (claimItem || null) as ClaimItemRow | null, isClaimOwner };
   }
 
-  // Finder viewing a temuan report: surface the ticket(s) on that item so
-  // the report view can link to the ticket (claims live on items, not reports).
+  // Finder viewing a temuan report: surface the claim on that item through the
+  // finder-safe RPC, because the claims RLS policy hides it from the finder.
+  let foundReportClaimItem: ClaimItemRow | null = null;
   if (!claim && report.type === 'temuan') {
-    const { data: itemRow } = await supabase
-      .from('items')
-      .select('id')
-      .eq('source_report_id', report.id)
-      .maybeSingle();
-    if (itemRow?.id) {
-      const { data: itemClaim } = await supabase
-        .from('claims')
-        .select('id, user_id, report_id, item_id, status, ticket_code, pickup_location, pickup_at, reviewed_at, approved_at, created_at, updated_at, item:items!item_id(id, title, location, image_url, status)')
-        .eq('item_id', itemRow.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
+    const finderClaim = await fetchFinderClaim({ reportId: report.id });
+    if (finderClaim) {
+      claim = finderClaim.claim;
+      isClaimOwner = finderClaim.isClaimOwner;
+      const { data: claimItem } = await supabase
+        .from('items')
+        .select('id, title, location, status')
+        .eq('id', claim.item_id)
         .maybeSingle();
-      if (itemClaim) {
-        const c = itemClaim as unknown as {
-          id: string; user_id?: string; report_id: string | null; item_id: string;
-          status: ClaimRow['status']; ticket_code: string; pickup_location: string | null; pickup_at: string | null;
-          reviewed_at: string | null;
-          approved_at: string | null;
-          created_at: string; updated_at: string;
-          item: ClaimRow['item'] | Array<{ id?: string; title: string; location: string; image_url: string | null; status: string }> | null;
-        };
-        claim = {
-          id: c.id,
-          user_id: c.user_id,
-          report_id: c.report_id,
-          item_id: c.item_id,
-          status: c.status,
-          ticket_code: c.ticket_code,
-          pickup_location: c.pickup_location,
-          pickup_at: c.pickup_at,
-          reviewed_at: c.reviewed_at,
-          approved_at: c.approved_at,
-          created_at: c.created_at,
-          updated_at: c.updated_at,
-          item: Array.isArray(c.item) ? (c.item[0] as ClaimRow['item']) || null : (c.item as ClaimRow['item']) || null,
-        };
-        isClaimOwner = !claim.user_id || claim.user_id === user?.id;
-      }
+      foundReportClaimItem = (claimItem || null) as ClaimItemRow | null;
     }
   }
 
@@ -244,7 +240,7 @@ export async function fetchLatestUserReport(reportId?: string, ticketCode?: stri
 
   if (eventsError) throw eventsError;
 
-  return { user, reports, claims, report, events: (events || []) as ReportEventRow[], claim: claim || null, claimItem: null as ClaimItemRow | null, isClaimOwner };
+  return { user, reports, claims, report, events: (events || []) as ReportEventRow[], claim: claim || null, claimItem: foundReportClaimItem, isClaimOwner };
 }
 
 

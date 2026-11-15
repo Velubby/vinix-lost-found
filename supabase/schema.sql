@@ -691,116 +691,62 @@ create policy "Users can view their notifications"
 create policy "Users can update their notifications"
   on public.notifications for update using (auth.uid() = user_id);
 
-create or replace function public.notify_report_status_changed()
-returns trigger
-language plpgsql
-security definer set search_path = public
-as $$
-declare
-  report_owner uuid;
-  notif_type text;
-  notif_title text;
-  notif_body text;
-  notif_link text;
-begin
-  if old.status is distinct from new.status then
-    select user_id into report_owner from public.reports where id = new.id;
-
-    notif_type := 'report';
-    notif_link := '/lacak?report=' || new.id;
-
-    if new.status = 'ditemukan' then
-      notif_title := 'Laporan Diterima';
-      notif_body := 'Laporan barang yang kamu ajukan telah diterima dan sedang ditinjau.';
-    elsif new.status = 'klaim' then
-      notif_title := 'Ada Klaim Barang';
-      notif_body := 'Seseorang mengajukan klaim pada laporan barang temuanmu.';
-    elsif new.status = 'selesai' then
-      notif_title := 'Laporan Selesai';
-      notif_body := 'Laporan kamu telah ditandai selesai. Terima kasih telah melaporkan.';
-    elsif new.status = 'aktif' then
-      notif_title := 'Laporan Aktif';
-      notif_body := 'Laporan kamu sudah aktif dan tersedia di katalog pencarian.';
-    else
-      return new;
-    end if;
-
-    insert into public.notifications (user_id, title, body, type, link)
-    values (report_owner, notif_title, notif_body, notif_type, notif_link);
-  end if;
-  return new;
-end;
-$$;
-
+-- Notifications are written by the admin server actions (src/app/admin/actions.ts).
+-- The old triggers wrote a second, differently worded notification for the same
+-- transition, so they are dropped instead of recreated.
 drop trigger if exists on_notify_report_status_changed on public.reports;
-create trigger on_notify_report_status_changed
-after update on public.reports
-for each row execute procedure public.notify_report_status_changed();
+drop trigger if exists on_notify_claim_status_changed on public.claims;
+drop function if exists public.notify_report_status_changed();
+drop function if exists public.notify_claim_status_changed();
 
-create or replace function public.notify_claim_status_changed()
-returns trigger
-language plpgsql
-security definer set search_path = public
+-- Finder-safe claim projection: a finder can read the status of the claim on
+-- the item they handed in without seeing private answers or contact phone.
+create or replace function public.get_my_found_report_claim(
+  p_report_id uuid default null,
+  p_ticket_code text default null
+)
+returns table (
+  id uuid,
+  item_id uuid,
+  report_id uuid,
+  status public.claim_status,
+  ticket_code text,
+  pickup_location text,
+  pickup_at timestamptz,
+  reviewed_at timestamptz,
+  approved_at timestamptz,
+  created_at timestamptz,
+  updated_at timestamptz,
+  is_claim_owner boolean
+)
+language sql
+stable
+security definer
+set search_path = public
 as $$
-declare
-  claim_owner uuid;
-  report_owner uuid;
-  source_report uuid;
-  notif_title text;
-  notif_body text;
-  notif_link text;
-begin
-  if new.status = old.status then
-    return new;
-  end if;
-
-  claim_owner := new.user_id;
-
-  if new.status = 'disetujui' then
-    notif_title := 'Klaim Disetujui';
-    notif_body := 'Klaim barang temuanmu telah disetujui. Lokasi pengambilan: ' || coalesce(new.pickup_location, '-');
-    notif_link := '/lacak?ticket=' || new.ticket_code;
-    insert into public.notifications (user_id, title, body, type, link)
-    values (claim_owner, notif_title, notif_body, 'claim', notif_link);
-  elsif new.status = 'ditolak' then
-    notif_title := 'Klaim Ditolak';
-    notif_body := 'Klaim barang temuanmu ditolak oleh admin.';
-    notif_link := '/lacak?ticket=' || new.ticket_code;
-    insert into public.notifications (user_id, title, body, type, link)
-    values (claim_owner, notif_title, notif_body, 'claim', notif_link);
-  end if;
-
-  select items.source_report_id into source_report
-  from public.items
-  where items.id = new.item_id;
-
-  if source_report is not null then
-    select reports.user_id into report_owner
-    from public.reports
-    where reports.id = source_report;
-  end if;
-
-  if report_owner is not null and report_owner <> claim_owner then
-    if new.status = 'disetujui' then
-      notif_title := 'Klaim Barang Temuanmu Disetujui';
-      notif_body := 'Seseorang mengklaim barang temuanmu dan klaimnya telah disetujui admin.';
-      notif_link := '/lacak?ticket=' || new.ticket_code;
-      insert into public.notifications (user_id, title, body, type, link)
-      values (report_owner, notif_title, notif_body, 'claim', notif_link);
-    elsif new.status = 'ditolak' then
-      notif_title := 'Klaim Barang Temuanmu Ditolak';
-      notif_body := 'Klaim atas barang temuanmu ditolak oleh admin.';
-      notif_link := '/lacak?ticket=' || new.ticket_code;
-      insert into public.notifications (user_id, title, body, type, link)
-      values (report_owner, notif_title, notif_body, 'claim', notif_link);
-    end if;
-  end if;
-
-  return new;
-end;
+  select
+    c.id,
+    c.item_id,
+    c.report_id,
+    c.status,
+    c.ticket_code,
+    c.pickup_location,
+    c.pickup_at,
+    c.reviewed_at,
+    c.approved_at,
+    c.created_at,
+    c.updated_at,
+    c.user_id = auth.uid() as is_claim_owner
+  from public.claims c
+  join public.items i on i.id = c.item_id
+  join public.reports r on r.id = i.source_report_id
+  where r.user_id = auth.uid()
+    and (p_report_id is null or r.id = p_report_id)
+    and (p_ticket_code is null or lower(c.ticket_code) = lower(p_ticket_code))
+  order by c.created_at desc
+  limit 1;
 $$;
 
-drop trigger if exists on_notify_claim_status_changed on public.claims;
-create trigger on_notify_claim_status_changed
-after update on public.claims
-for each row execute procedure public.notify_claim_status_changed();
+revoke all on function public.get_my_found_report_claim(uuid, text) from public;
+revoke all on function public.get_my_found_report_claim(uuid, text) from anon;
+grant execute on function public.get_my_found_report_claim(uuid, text) to authenticated;

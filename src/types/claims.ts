@@ -127,3 +127,49 @@ export const REPORT_STATUS_COLORS: Record<ReportStatus, { bg: string; text: stri
   klaim: { bg: 'bg-accent/10', text: 'text-accent', dot: 'bg-accent', border: 'border-accent/20' },
   selesai: { bg: 'bg-success-soft', text: 'text-success', dot: 'bg-success', border: 'border-success/20' },
 };
+
+// The same report status means different things to a finder and an owner, so
+// user-facing pages share this map instead of each page inventing its own.
+export const REPORT_TYPE_STATUS_LABELS: Record<LostReport['type'], Record<ReportStatus, string>> = {
+  hilang: {
+    draf: 'Draf',
+    aktif: 'Dalam Pencarian',
+    ditemukan: 'Ditemukan di Posko',
+    klaim: 'Proses Klaim',
+    selesai: 'Selesai (Diserahkan)',
+  },
+  temuan: {
+    draf: 'Draf',
+    aktif: 'Menunggu Penyerahan',
+    ditemukan: 'Menunggu Klaim',
+    klaim: 'Verifikasi Klaim',
+    selesai: 'Selesai (Diserahkan)',
+  },
+};
+
+export function getReportStatusLabel(type: LostReport['type'], status: ReportStatus): string {
+  return REPORT_TYPE_STATUS_LABELS[type][status];
+}
+
+const CLAIM_STATUS_TEXT: Record<ClaimStatus, string> = {
+  diajukan: 'Menunggu verifikasi',
+  ditinjau: 'Sedang ditinjau',
+  disetujui: 'Disetujui, siap diambil',
+  ditolak: 'Ditolak',
+};
+
+export function getClaimStatusLabel(status: ClaimStatus, pickupAt?: string | null): string {
+  if (status === 'disetujui' && pickupAt) return 'Selesai, sudah diambil';
+  return CLAIM_STATUS_TEXT[status];
+}
+
+const ITEM_STATUS_LABELS: Record<string, string> = {
+  'Menunggu Penyerahan': 'Menunggu Penyerahan',
+  Ditemukan: 'Tersedia untuk Diklaim',
+  'Klaim Disetujui': 'Klaim Disetujui',
+  Selesai: 'Selesai',
+};
+
+export function getItemStatusLabel(status: string): string {
+  return ITEM_STATUS_LABELS[status] ?? status;
+}

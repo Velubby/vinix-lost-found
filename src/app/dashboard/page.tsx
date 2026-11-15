@@ -7,6 +7,7 @@ import { getCurrentUser } from '@/lib/supabase/auth';
 import { createClient } from '@/lib/supabase/client';
 import { formatDate } from '@/lib/date';
 import { fetchLatestUserReport, type UserReportRow } from '@/lib/supabase/reports';
+import { getReportStatusLabel } from '@/types/claims';
 
 const CARE_PILLARS = [
   {
@@ -168,7 +169,7 @@ export default function DashboardPage() {
                 <span className="text-sm font-semibold text-ink">{latestReport.item_title}</span>
                 <span className="text-xs text-muted">· {latestReport.report_code}</span>
                 <span className="rounded-pill border border-line bg-surface px-2 py-0.5 text-[11px] font-semibold tracking-wide text-body">
-                  {latestReport.status.toUpperCase()}
+                  {getReportStatusLabel(latestReport.type, latestReport.status)}
                 </span>
               </div>
               <p className="mt-0.5 line-clamp-2 text-pretty text-[13px] leading-5 text-body">

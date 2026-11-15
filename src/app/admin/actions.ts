@@ -5,6 +5,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { createNotification } from '@/lib/supabase/server-notifications';
+import { claimStatusNotification, reportStatusNotification } from '@/lib/notification-copy';
 import type { FilterStatus, UpdateClaimInput, BulkUpdateInput, Claim, LostReport, ReportStatus, FilterReportStatus } from '@/types/claims';
 
 const updateClaimSchema = z.object({
@@ -120,40 +121,47 @@ export async function updateClaimAction(input: UpdateClaimInput): Promise<Action
       }
     }
 
-    // Kirim notifikasi ke pemilik klaim dan pemilik barang temuan (jika berbeda)
     try {
-      const claimOwnerId = (claim as { user_id?: string }).user_id;
-      const statusLabel = parsed.status === 'disetujui' ? 'disetujui' : parsed.status === 'ditolak' ? 'ditolak' : 'diperbarui';
+      const { data: claimItem } = claim.item_id
+        ? await supabase
+            .from('items')
+            .select('user_id, source_report_id, title')
+            .eq('id', claim.item_id)
+            .maybeSingle()
+        : { data: null };
 
+      const claimOwnerId = (claim as { user_id?: string }).user_id;
       const claimTicketLink = `/lacak?ticket=${claim.ticket_code}`;
 
       if (claimOwnerId) {
         await createNotification({
           userId: claimOwnerId,
-          title: parsed.status === 'disetujui' ? 'Klaim disetujui' : parsed.status === 'ditolak' ? 'Klaim ditolak' : 'Status klaim diperbarui',
-          body: `Status klaim Anda berubah menjadi ${statusLabel}${parsed.pickupLocation ? ', lokasi pengambilan: ' + parsed.pickupLocation : ''}`,
+          ...claimStatusNotification({
+            status: parsed.status,
+            audience: 'claimant',
+            ticketCode: claim.ticket_code,
+            pickupLocation: parsed.pickupLocation ?? claim.pickup_location,
+            rejectReason: parsed.rejectReason ?? null,
+          }),
           type: 'claim',
           link: claimTicketLink,
         });
       }
 
-      // Notifikasi juga ke pemilik barang temuan jika klaim adalah pada barang temuan dan pemilik berbeda
-      if (claim.item_id && claimOwnerId) {
-        const { data: item } = await supabase
-          .from('items')
-          .select('user_id, source_report_id')
-          .eq('id', claim.item_id)
-          .single();
-
-        if (item?.user_id && item.user_id !== claimOwnerId) {
-          await createNotification({
-            userId: item.user_id,
-            title: 'Ada klaim pada barang temuan Anda',
-            body: `Tiket ${claim.ticket_code}: status klaim berubah menjadi ${statusLabel}${parsed.pickupLocation ? ', lokasi pengambilan: ' + parsed.pickupLocation : ''}`,
-            type: 'claim',
-            link: claimTicketLink,
-          });
-        }
+      if (claimItem?.user_id && claimItem.user_id !== claimOwnerId) {
+        await createNotification({
+          userId: claimItem.user_id,
+          ...claimStatusNotification({
+            status: parsed.status,
+            audience: 'finder',
+            ticketCode: claim.ticket_code,
+            itemTitle: claimItem.title,
+          }),
+          type: 'claim',
+          link: claimItem.source_report_id
+            ? `/lacak?report=${claimItem.source_report_id}`
+            : '/laporan-saya',
+        });
       }
     } catch (notifyError) {
       console.error('Send notification error:', notifyError);
@@ -276,42 +284,54 @@ export async function bulkUpdateClaimsAction(input: BulkUpdateInput): Promise<Ac
       if (eventsError) console.error('Insert report events error:', eventsError);
     }
 
-    // Kirim notifikasi per klaim (link spesifik, sama seperti single update)
     try {
-      const statusLabel = parsed.status === 'disetujui' ? 'disetujui' : parsed.status === 'ditolak' ? 'ditolak' : 'diperbarui';
-      // Batch lookup items untuk notifikasi pemilik barang temuan
       const itemIds = [...new Set(processableClaims.map((c) => c.item_id).filter(Boolean))] as string[];
-      const itemMap: Record<string, { user_id: string; source_report_id: string | null }> = {};
+      const itemMap: Record<string, { user_id: string; source_report_id: string | null; title: string }> = {};
       if (itemIds.length > 0) {
         const { data: items } = await supabase
           .from('items')
-          .select('id, user_id, source_report_id')
+          .select('id, user_id, source_report_id, title')
           .in('id', itemIds);
         if (items) {
-          for (const it of items as Array<{ id: string; user_id: string; source_report_id: string | null }>) {
-            itemMap[it.id] = { user_id: it.user_id, source_report_id: it.source_report_id };
+          for (const it of items as Array<{ id: string; user_id: string; source_report_id: string | null; title: string }>) {
+            itemMap[it.id] = { user_id: it.user_id, source_report_id: it.source_report_id, title: it.title };
           }
         }
       }
+
       for (const c of processableClaims) {
         const claimOwnerId = (c as { user_id?: string }).user_id;
-        if (claimOwnerId && (c as { ticket_code?: string }).ticket_code) {
+        const ticketCode = (c as { ticket_code?: string }).ticket_code;
+        if (!ticketCode) continue;
+
+        if (claimOwnerId) {
           await createNotification({
             userId: claimOwnerId,
-            title: parsed.status === 'disetujui' ? 'Klaim disetujui' : parsed.status === 'ditolak' ? 'Klaim ditolak' : 'Status klaim diperbarui',
-            body: `Status klaim Anda berubah menjadi ${statusLabel}${parsed.pickupLocation ? ', lokasi pengambilan: ' + parsed.pickupLocation : ''}`,
+            ...claimStatusNotification({
+              status: parsed.status,
+              audience: 'claimant',
+              ticketCode,
+              pickupLocation: parsed.pickupLocation ?? null,
+            }),
             type: 'claim',
-            link: `/lacak?ticket=${(c as { ticket_code?: string }).ticket_code}`,
+            link: `/lacak?ticket=${ticketCode}`,
           });
         }
+
         const item = c.item_id ? itemMap[c.item_id] : undefined;
-        if (item?.user_id && claimOwnerId && item.user_id !== claimOwnerId && (c as { ticket_code?: string }).ticket_code) {
+        if (item?.user_id && item.user_id !== claimOwnerId) {
           await createNotification({
             userId: item.user_id,
-            title: 'Ada klaim pada barang temuan Anda',
-            body: `Tiket ${(c as { ticket_code?: string }).ticket_code}: status klaim berubah menjadi ${statusLabel}${parsed.pickupLocation ? ', lokasi pengambilan: ' + parsed.pickupLocation : ''}`,
+            ...claimStatusNotification({
+              status: parsed.status,
+              audience: 'finder',
+              ticketCode,
+              itemTitle: item.title,
+            }),
             type: 'claim',
-            link: `/lacak?ticket=${(c as { ticket_code?: string }).ticket_code}`,
+            link: item.source_report_id
+              ? `/lacak?report=${item.source_report_id}`
+              : '/laporan-saya',
           });
         }
       }
@@ -722,22 +742,18 @@ export async function updateReportStatusAction(input: {
       return { success: false, error: 'Gagal memperbarui status laporan', code: 'UPDATE_FAILED' };
     }
 
-    // Kirim notifikasi ke pemilik laporan
     try {
       const reportOwnerId = (existingReport as { user_id?: string }).user_id;
-      const statusLabelMap: Record<string, string> = {
-        aktif: 'aktif',
-        ditemukan: 'ditemukan dan siap diverifikasi',
-        selesai: 'selesai (diserahkan)',
-        klaim: 'proses klaim',
-        draf: 'draf',
-      };
+      const copy = reportStatusNotification({
+        type: existingReport.type,
+        status: parsed.status,
+        itemTitle: existingReport.item_title,
+      });
 
-      if (reportOwnerId) {
+      if (reportOwnerId && copy && existingReport.status !== parsed.status) {
         await createNotification({
           userId: reportOwnerId,
-          title: 'Status laporan diperbarui',
-          body: `Status laporan "${existingReport.item_title}" berubah menjadi ${statusLabelMap[parsed.status] ?? parsed.status}`,
+          ...copy,
           type: 'report',
           link: '/lacak?report=' + parsed.reportId,
         });

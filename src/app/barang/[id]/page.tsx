@@ -8,6 +8,7 @@ import { ArrowLeft, MapPin, Calendar, Clock, ShieldCheck, CheckCircle2 } from 'l
 import { fetchCatalogItemById, submitItemClaim, type CatalogItem } from '@/lib/supabase/items';
 import { getCurrentUser, getUserProfile } from '@/lib/supabase/auth';
 import { validateIndonesianPhone, sanitizePhoneInput, validateCiriKhusus } from '@/lib/validation';
+import { getItemStatusLabel } from '@/types/claims';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -220,7 +221,7 @@ function ItemDetailContent() {
               className={`inline-flex items-center gap-1.5 rounded-pill px-2.5 py-1 text-xs font-semibold ${statusTone(item.status)}`}
             >
               <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
-              {item.status}
+              {getItemStatusLabel(item.status)}
             </span>
 
             <h1 className="text-balance text-[1.75rem] font-semibold leading-[1.2] tracking-tight text-ink sm:text-[2.125rem] sm:leading-[1.18]">
