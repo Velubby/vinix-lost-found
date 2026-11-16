@@ -5,7 +5,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const cursor = searchParams.get('cursor') || undefined;
   const limit = parseInt(searchParams.get('limit') || '20', 10);
-  const status = (searchParams.get('status') as 'diajukan' | 'ditinjau' | 'disetujui' | 'ditolak' | 'semua' | null) || undefined;
+  const status = (searchParams.get('status') as 'diajukan' | 'ditinjau' | 'disetujui' | 'ditolak' | 'ditutup' | 'semua' | null) || undefined;
   const search = searchParams.get('search') || undefined;
 
   const result = await fetchClaimsAction(cursor, limit, status, search);

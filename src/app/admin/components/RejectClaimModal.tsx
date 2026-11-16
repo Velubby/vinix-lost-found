@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import type { Claim } from '@/types/claims';
+import { CLAIM_REJECTION_REASONS, composeDecisionNote } from '@/lib/claim-reasons';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import { TextArea } from '@/components/ui/Field';
+import { ClaimRejectionFields } from './ClaimRejectionFields';
 
 interface RejectClaimModalProps {
   claim: Claim | null;
@@ -20,9 +21,8 @@ export function RejectClaimModal({
   onConfirm,
   isPending,
 }: RejectClaimModalProps) {
-  const [rejectReason, setRejectReason] = useState(
-    'Ciri rahasia yang diberikan belum sesuai dengan barang temuan.'
-  );
+  const [preset, setPreset] = useState<string>(CLAIM_REJECTION_REASONS[0].value);
+  const [note, setNote] = useState('');
 
   if (!claim) return null;
 
@@ -36,16 +36,15 @@ export function RejectClaimModal({
     >
       <div className="space-y-4">
         <div className="rounded-surface border border-warning/20 bg-warning-soft p-3.5 text-[13px] leading-5 text-body">
-          Penolakan klaim akan mencatat status ditolak di linimasa pemohon. Anda tetap dapat memulihkan status ke &quot;Ditinjau&quot; jika terjadi salah klik atau pemohon membawa bukti baru.
+          Alasan yang dipilih akan muncul di halaman lacak pemohon. Jika pemohon membawa bukti baru, petugas masih dapat membuka klaim ini kembali untuk ditinjau.
         </div>
 
-        <TextArea
-          id="reject-reason"
-          label="Alasan Penolakan"
-          rows={3}
-          value={rejectReason}
-          onChange={(e) => setRejectReason(e.target.value)}
-          placeholder="Tuliskan alasan penolakan agar tercatat di audit linimasa..."
+        <ClaimRejectionFields
+          preset={preset}
+          note={note}
+          onPresetChange={setPreset}
+          onNoteChange={setNote}
+          idPrefix="reject-claim"
         />
 
         <div className="flex flex-col-reverse gap-2.5 border-t border-line pt-4 sm:flex-row sm:justify-end">
@@ -59,7 +58,7 @@ export function RejectClaimModal({
           </Button>
           <Button
             variant="outline"
-            onClick={() => onConfirm(claim, rejectReason.trim())}
+            onClick={() => onConfirm(claim, composeDecisionNote(preset, note))}
             loading={isPending}
             className="w-full border-danger/30 text-danger hover:bg-danger-soft sm:w-auto"
           >

@@ -2,11 +2,10 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { Search, PlusCircle, PackageSearch, FileText, Clock, ArrowRight } from 'lucide-react';
-import { getCurrentUser } from '@/lib/supabase/auth';
-import { createClient } from '@/lib/supabase/client';
+import { Search, PlusCircle, PackageSearch, FileText, Clock, ArrowRight, Ticket } from 'lucide-react';
 import { formatDate } from '@/lib/date';
-import { fetchLatestUserReport, type UserReportRow } from '@/lib/supabase/reports';
+import { fetchLatestUserReport, type ClaimRow, type UserReportRow } from '@/lib/supabase/reports';
+import { getClaimStatusLabel, getReportStatusLabel } from '@/types/claims';
 
 const CARE_PILLARS = [
   {
@@ -26,22 +25,28 @@ const CARE_PILLARS = [
 export default function DashboardPage() {
   const [userName, setUserName] = useState('Karyawan');
   const [activeReportCount, setActiveReportCount] = useState(0);
+  const [activeClaimCount, setActiveClaimCount] = useState(0);
   const [latestReport, setLatestReport] = useState<UserReportRow | null>(null);
+  const [latestClaim, setLatestClaim] = useState<ClaimRow | null>(null);
 
   useEffect(() => {
     const loadDashboard = async () => {
-      const user = await getCurrentUser();
-      setUserName(user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Karyawan');
-      if (user) {
-        const supabase = createClient();
-        const { count } = await supabase
-          .from('reports')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', user.id)
-          .in('status', ['aktif', 'ditemukan', 'klaim']);
-        setActiveReportCount(count || 0);
-        const { report } = await fetchLatestUserReport();
+      try {
+        const { user, reports, claims, report } = await fetchLatestUserReport();
+        setUserName(user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Karyawan');
+        setActiveReportCount(
+          reports.filter((item) => item.status === 'aktif' || item.status === 'ditemukan' || item.status === 'klaim').length
+        );
+        const activeClaims = claims.filter(
+          (claim) =>
+            (claim.status === 'diajukan' || claim.status === 'ditinjau' || claim.status === 'disetujui') &&
+            !claim.pickup_at
+        );
+        setActiveClaimCount(activeClaims.length);
         setLatestReport(report);
+        setLatestClaim(activeClaims[0] || null);
+      } catch {
+        setUserName('Karyawan');
       }
     };
 
@@ -60,10 +65,16 @@ export default function DashboardPage() {
             Apa yang ingin kamu lakukan hari ini?
           </p>
         </div>
-        <span className="inline-flex w-fit shrink-0 items-center gap-2 rounded-pill border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-body">
-          <span className="size-2 rounded-full bg-accent" aria-hidden="true" />
-          <span>{activeReportCount} Laporan Aktif</span>
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex w-fit shrink-0 items-center gap-2 rounded-pill border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-body">
+            <span className="size-2 rounded-full bg-accent" aria-hidden="true" />
+            <span>{activeReportCount} Laporan Aktif</span>
+          </span>
+          <span className="inline-flex w-fit shrink-0 items-center gap-2 rounded-pill border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-body">
+            <Ticket className="size-3.5 text-muted" aria-hidden="true" />
+            <span>{activeClaimCount} Tiket Klaim Aktif</span>
+          </span>
+        </div>
       </div>
 
       {/* Action cards grid */}
@@ -168,7 +179,7 @@ export default function DashboardPage() {
                 <span className="text-sm font-semibold text-ink">{latestReport.item_title}</span>
                 <span className="text-xs text-muted">· {latestReport.report_code}</span>
                 <span className="rounded-pill border border-line bg-surface px-2 py-0.5 text-[11px] font-semibold tracking-wide text-body">
-                  {latestReport.status.toUpperCase()}
+                  {getReportStatusLabel(latestReport.type, latestReport.status)}
                 </span>
               </div>
               <p className="mt-0.5 line-clamp-2 text-pretty text-[13px] leading-5 text-body">
@@ -182,6 +193,36 @@ export default function DashboardPage() {
             className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-control bg-brand px-4 text-[13px] font-semibold text-inverse transition-colors hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
           >
             Lacak Laporan
+          </Link>
+        </div>
+      )}
+
+      {/* Active Claim Banner */}
+      {latestClaim && (
+        <div className="flex flex-col justify-between gap-4 rounded-card border border-line bg-surface-muted p-4 sm:flex-row sm:items-center sm:p-5">
+          <div className="flex items-start gap-3.5 sm:items-center">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-surface bg-surface text-ink">
+              <Ticket className="size-5" aria-hidden="true" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="text-sm font-semibold text-ink">{latestClaim.item?.title || 'Barang temuan'}</span>
+                <span className="text-xs text-muted">· Tiket {latestClaim.ticket_code}</span>
+                <span className="rounded-pill border border-line bg-surface px-2 py-0.5 text-[11px] font-semibold tracking-wide text-body">
+                  {getClaimStatusLabel(latestClaim.status, latestClaim.pickup_at)}
+                </span>
+              </div>
+              <p className="mt-0.5 text-pretty text-[13px] leading-5 text-body">
+                Diajukan {formatDate(latestClaim.created_at)} · Diperbarui {formatDate(latestClaim.updated_at)}
+              </p>
+            </div>
+          </div>
+
+          <Link
+            href={`/lacak?ticket=${latestClaim.ticket_code}`}
+            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-control bg-brand px-4 text-[13px] font-semibold text-inverse transition-colors hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          >
+            Buka Tiket Klaim
           </Link>
         </div>
       )}

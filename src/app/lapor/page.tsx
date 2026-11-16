@@ -3,7 +3,8 @@
 import { Suspense, useEffect, useLayoutEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ShieldAlert, Upload, Camera, CheckCircle2, ArrowRight, ArrowLeft, Copy, CheckCheck, X, Check, Info } from 'lucide-react';
-import { OFFICE_LOCATIONS } from '@/lib/locations';
+import { OFFICE_LOCATIONS, DEFAULT_PICKUP_LOCATION } from '@/lib/locations';
+import { HandoverInfoCard } from '@/components/HandoverInfoCard';
 import {
   Dialog,
   DialogPortal,
@@ -164,7 +165,7 @@ function ReportForm() {
     namaPelapor: '',
     email: '',
     telepon: '',
-    setuju: true
+    setuju: false
   }));
 
   useEffect(() => {
@@ -283,7 +284,7 @@ function ReportForm() {
       namaPelapor: current.namaPelapor,
       email: current.email,
       telepon: current.telepon,
-      setuju: true,
+      setuju: false,
     }));
     setUseCustomLocation(false);
     setCurrentStep(1);
@@ -429,7 +430,7 @@ function ReportForm() {
       setSubmittedReportCode(reportCode);
       setSubmitError('');
       setIsSuccess(true);
-      toast.success('Laporan berhasil dikirim! Jika ini laporan temuan, silakan serahkan barang ke pos/penyimpanan sesuai arahan petugas untuk verifikasi.');
+      toast.success('Laporan berhasil dikirim! Jika ini laporan temuan, serahkan barang sesuai jam layanan agar petugas bisa memverifikasi.');
       setFormData((prev) => ({
         ...prev,
         namaBarang: '',
@@ -437,7 +438,7 @@ function ReportForm() {
         ...getJakartaDateTime(),
         deskripsiPublik: '',
         ciriRahasia: '',
-        setuju: true
+        setuju: false
       }));
       clearPhotos();
       setCurrentStep(1);
@@ -973,7 +974,9 @@ function ReportForm() {
                 Laporan Anda Telah Terdaftar
               </DialogTitle>
               <DialogDescription className="mx-auto mt-1 max-w-sm text-[13px] leading-5 text-body">
-                Petugas posko keamanan akan memverifikasi dan mencocokkan ciri barang Anda di sistem kantor.
+                {reportType === 'temuan'
+                  ? 'Serahkan barang sesuai jam layanan; petugas akan memverifikasi sebelum barang tampil di katalog.'
+                  : 'Petugas akan memverifikasi dan mencocokkan ciri barang Anda di sistem kantor.'}
               </DialogDescription>
             </div>
 
@@ -1014,6 +1017,15 @@ function ReportForm() {
                 )}
               </Button>
             </div>
+
+            {reportType === 'temuan' && (
+              <HandoverInfoCard
+                title="Cara menyerahkan barang"
+                location={DEFAULT_PICKUP_LOCATION}
+                bring="ID karyawan/KTP dan barang temuan"
+                note="Tunjukkan nomor laporan ini ke petugas agar barang langsung diverifikasi."
+              />
+            )}
 
             <div className="flex flex-col justify-center gap-2.5 pt-2 sm:flex-row">
               <Button

@@ -79,7 +79,7 @@ export function AdminReportsView({
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Cari kode tiket, nama barang, pelapor, atau lokasi..."
+            placeholder="Cari nomor laporan, nama barang, pelapor, atau lokasi..."
             className="form-input form-input-icon-left w-full"
             aria-label="Cari laporan barang hilang"
           />
@@ -279,7 +279,7 @@ export function AdminReportsView({
                         className="w-full"
                       >
                         <CheckCircle2 className="size-4" aria-hidden="true" />
-                        Tandai Ditemukan
+                        Tandai Barang Ditemukan
                       </Button>
                     )}
 
@@ -305,7 +305,7 @@ export function AdminReportsView({
                           className="w-full"
                         >
                           <Check className="size-4" aria-hidden="true" />
-                          Serah Terima
+                          Selesaikan Serah Terima
                         </Button>
                       </>
                     )}

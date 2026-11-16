@@ -3,22 +3,18 @@
 import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowRight, Check, CheckCircle2, Clock, MapPin, Ticket, XCircle } from 'lucide-react';
+import { Check, CheckCircle2, Clock, MapPin, Ticket, XCircle, Archive } from 'lucide-react';
 import QRCode from 'react-qr-code';
 import { formatDate } from '@/lib/date';
 import { fetchLatestUserReport, type ReportEventRow, type UserReportRow, type ClaimRow, type ClaimItemRow } from '@/lib/supabase/reports';
-import { DEFAULT_PICKUP_LOCATION, OFFICE_ADDRESS, PICKUP_INSTRUCTIONS } from '@/lib/locations';
-import { REPORT_STATUS_COLORS, STATUS_COLORS } from '@/types/claims';
+import { DEFAULT_PICKUP_LOCATION, OFFICE_HOURS } from '@/lib/locations';
+import { HandoverInfoCard } from '@/components/HandoverInfoCard';
+import { NewFoundItemsDigest } from '@/components/NewFoundItemsDigest';
+import { getClaimStatusLabel, REPORT_STATUS_COLORS, STATUS_COLORS } from '@/types/claims';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ContactStaffButton } from '@/components/ContactStaffButton';
 
 const CLAIM_STEPS = ['Klaim diajukan', 'Verifikasi petugas', 'Klaim disetujui', 'Barang diambil'];
-const CLAIM_STATUS_LABELS: Record<ClaimRow['status'], string> = {
-  diajukan: 'Menunggu verifikasi',
-  ditinjau: 'Sedang ditinjau',
-  disetujui: 'Disetujui',
-  ditolak: 'Ditolak',
-};
 function getReportProgress(report: Pick<UserReportRow, 'type' | 'status'>, claim?: ClaimRow | null) {
   const isFoundReport = report.type === 'temuan';
   // Lost reports are returned directly by staff; they do not go through a
@@ -44,14 +40,14 @@ function getReportProgress(report: Pick<UserReportRow, 'type' | 'status'>, claim
   const description = {
     draf: 'Laporan masih berupa draf dan belum masuk proses penanganan.',
     aktif: isFoundReport
-      ? 'Laporan temuan diterima. Silakan serahkan barang ke pos/penyimpanan untuk verifikasi.'
+      ? 'Laporan temuan diterima. Serahkan barang ke petugas untuk diverifikasi.'
       : 'Laporan kehilangan aktif. Barang masih dalam pencarian.',
     ditemukan: isFoundReport
-      ? 'Barang sudah aman di pos/penyimpanan dan tampil di katalog. Menunggu pemilik mengajukan klaim.'
+      ? 'Barang sudah aman di lokasi penyimpanan dan tampil di katalog. Menunggu pemilik mengajukan klaim.'
       : 'Barang telah dinyatakan ditemukan. Kepemilikan perlu diverifikasi sebelum pengambilan.',
     klaim: isFoundReport
       ? claim?.status === 'disetujui'
-        ? 'Klaim sudah disetujui. Barang menunggu diambil pemilik pada jam kerja kantor.'
+        ? `Klaim sudah disetujui. Barang menunggu diambil di ${claim?.pickup_location ?? DEFAULT_PICKUP_LOCATION} pada jam layanan ${OFFICE_HOURS}.`
         : 'Ada klaim kepemilikan yang perlu diverifikasi oleh petugas.'
       : 'Ada klaim kepemilikan yang perlu diverifikasi oleh petugas.',
     selesai: 'Laporan telah ditandai selesai. Lihat riwayat aktivitas untuk rincian penyelesaiannya.',
@@ -63,14 +59,16 @@ function getReportProgress(report: Pick<UserReportRow, 'type' | 'status'>, claim
 function getClaimProgress(claim: ClaimRow) {
   const isHandedOver = Boolean(claim.pickup_at);
   const isRejected = claim.status === 'ditolak';
+  const isClosed = claim.status === 'ditutup';
   const isApproved = claim.status === 'disetujui';
-  const statusIndex = claim.status === 'diajukan' ? 0 : isRejected || claim.status === 'ditinjau' ? 1 : isHandedOver ? 3 : 2;
+  const statusIndex = claim.status === 'diajukan' ? 0 : isRejected || isClosed || claim.status === 'ditinjau' ? 1 : isHandedOver ? 3 : 2;
 
   const statusLabel = {
     diajukan: 'Menunggu verifikasi',
     ditinjau: 'Sedang ditinjau',
     disetujui: isHandedOver ? 'Selesai' : 'Klaim disetujui',
     ditolak: 'Klaim ditolak',
+    ditutup: 'Klaim ditutup',
   }[claim.status];
 
   const description = {
@@ -78,11 +76,12 @@ function getClaimProgress(claim: ClaimRow) {
     ditinjau: 'Petugas sedang memeriksa ciri kepemilikan. Simpan nomor tiket ini sampai proses selesai.',
     disetujui: isHandedOver
       ? 'Barang sudah diserahkan. Simpan tiket ini sebagai bukti pengambilan.'
-      : `Klaim disetujui. Silakan datang ke ${DEFAULT_PICKUP_LOCATION} pada jam kerja kantor dengan membawa ID card/KTP.`,
-    ditolak: 'Ciri kepemilikan belum cocok dengan barang. Hubungi petugas untuk peninjauan ulang, atau ajukan klaim baru dengan bukti tambahan.',
+      : `Klaim disetujui. Silakan datang ke ${claim.pickup_location ?? DEFAULT_PICKUP_LOCATION} pada jam layanan ${OFFICE_HOURS} dengan membawa ID card/KTP.`,
+    ditolak: 'Ciri kepemilikan belum cocok dengan barang. Kalau barang masih tersedia, kamu bisa mengajukan satu klaim ulang dengan bukti tambahan.',
+    ditutup: 'Klaim ditutup karena barang sudah diklaim dan diserahkan kepada pemohon lain yang terverifikasi.',
   }[claim.status];
 
-  return { statusIndex, statusLabel, description, isApproved, isRejected, isHandedOver };
+  return { statusIndex, statusLabel, description, isApproved, isRejected, isClosed, isHandedOver };
 }
 
 function getClaimTimeline(claim: ClaimRow) {
@@ -109,7 +108,16 @@ function getClaimTimeline(claim: ClaimRow) {
     timeline.push({
       id: 'claim-rejected',
       title: 'Klaim ditolak',
-      description: 'Ciri kepemilikan belum cocok. Barang kembali tampil di katalog temuan.',
+      description: claim.decision_note || 'Ciri kepemilikan belum cocok. Barang kembali tampil di katalog temuan.',
+      created_at: claim.updated_at,
+    });
+  }
+
+  if (claim.status === 'ditutup') {
+    timeline.push({
+      id: 'claim-closed',
+      title: 'Klaim ditutup',
+      description: claim.decision_note || 'Barang sudah diklaim dan diserahkan kepada pemohon lain yang terverifikasi.',
       created_at: claim.updated_at,
     });
   }
@@ -120,7 +128,7 @@ function getClaimTimeline(claim: ClaimRow) {
       timeline.push({
         id: 'claim-approved',
         title: 'Klaim disetujui',
-        description: `Barang menunggu diambil di ${claim.pickup_location ?? DEFAULT_PICKUP_LOCATION} pada jam kerja kantor. Bawa ID card/KTP.`,
+        description: `Barang menunggu diambil di ${claim.pickup_location ?? DEFAULT_PICKUP_LOCATION} pada jam layanan ${OFFICE_HOURS}. Bawa ID card/KTP.`,
         created_at: approvedAt,
       });
     }
@@ -144,12 +152,14 @@ function TrackingStepper({
   statusIndex,
   isFinished,
   isStopped,
+  stopTone = 'danger',
 }: {
   label: string;
   steps: string[];
   statusIndex: number;
   isFinished: boolean;
   isStopped: boolean;
+  stopTone?: 'danger' | 'neutral';
 }) {
   return (
     <ol aria-label={label} className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-2">
@@ -157,6 +167,7 @@ function TrackingStepper({
         const isCurrent = index === statusIndex;
         const isComplete = index < statusIndex || (isCurrent && isFinished);
         const isStopStep = isStopped && isCurrent;
+        const isNeutralStop = isStopStep && stopTone === 'neutral';
         const isFilled = isStopStep || index < statusIndex || (isCurrent && !isStopped);
 
         return (
@@ -164,7 +175,9 @@ function TrackingStepper({
             <span
               aria-hidden="true"
               className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
-                isStopStep
+                isNeutralStop
+                  ? 'bg-surface-muted text-body ring-1 ring-line'
+                  : isStopStep
                   ? 'bg-danger text-inverse'
                   : isFilled
                   ? 'bg-brand text-inverse'
@@ -175,7 +188,9 @@ function TrackingStepper({
             </span>
             <span
               className={`text-xs leading-5 ${
-                isStopStep
+                isNeutralStop
+                  ? 'font-semibold text-body'
+                  : isStopStep
                   ? 'font-semibold text-danger'
                   : isCurrent
                   ? 'font-semibold text-ink'
@@ -186,7 +201,7 @@ function TrackingStepper({
             >
               {step}
               <span className="sr-only">
-                {isStopStep ? ', ditolak' : isComplete ? ', selesai' : isCurrent ? ', tahap saat ini' : ', belum dimulai'}
+                {isStopStep ? (isNeutralStop ? ', ditutup' : ', ditolak') : isComplete ? ', selesai' : isCurrent ? ', tahap saat ini' : ', belum dimulai'}
               </span>
             </span>
           </li>
@@ -222,6 +237,7 @@ function TrackingContent() {
   // Accept legacy ?id= (old notification links) as alias for ?report=
   const requestedReportId = searchParams.get('report') || searchParams.get('id') || undefined;
   const requestedTicket = searchParams.get('ticket') || undefined;
+  const queryString = searchParams.toString();
   const [report, setReport] = useState<UserReportRow | null>(null);
   const [reports, setReports] = useState<UserReportRow[]>([]);
   const [claims, setClaims] = useState<ClaimRow[]>([]);
@@ -238,7 +254,8 @@ function TrackingContent() {
     fetchLatestUserReport(requestedReportId, requestedTicket)
       .then((result) => {
         if (!result.user) {
-          router.replace('/masuk?next=/lacak');
+          const nextPath = queryString ? `/lacak?${queryString}` : '/lacak';
+          router.replace(`/masuk?${new URLSearchParams({ next: nextPath })}`);
           return;
         }
         setReports(result.reports);
@@ -251,7 +268,7 @@ function TrackingContent() {
       })
       .catch(() => setError('Status laporan belum dapat dimuat.'))
       .finally(() => setIsLoading(false));
-  }, [router, requestedReportId, requestedTicket]);
+  }, [router, requestedReportId, requestedTicket, queryString]);
 
   if (isLoading) return <div className="mx-auto max-w-6xl px-4 py-16 text-center text-sm text-muted">Memuat status laporan...</div>;
   if (error) return <div role="alert" className="mx-auto max-w-6xl px-4 py-16 text-center text-sm text-danger">{error}</div>;
@@ -268,15 +285,20 @@ function TrackingContent() {
       </div>
     );
 
-    const { statusIndex, statusLabel, description, isApproved, isRejected, isHandedOver } = getClaimProgress(claim);
+    const { statusIndex, statusLabel, description, isApproved, isRejected, isClosed, isHandedOver } = getClaimProgress(claim);
     const timeline = getClaimTimeline(claim);
-    const panelTone = isRejected
+    const itemAvailable = Boolean(claimItem?.status?.toLowerCase().includes('ditemukan'));
+    const panelTone = isClosed
+      ? 'bg-surface-muted border-line'
+      : isRejected
       ? 'bg-danger-soft border-danger/20'
       : isApproved
       ? 'bg-success-soft border-success/20'
       : 'bg-info-soft border-info/20';
-    const titleTone = isRejected ? 'text-danger' : isApproved ? 'text-success' : 'text-info';
-    const pillTone = isRejected
+    const titleTone = isClosed ? 'text-body' : isRejected ? 'text-danger' : isApproved ? 'text-success' : 'text-info';
+    const pillTone = isClosed
+      ? `${STATUS_COLORS.ditutup.bg} ${STATUS_COLORS.ditutup.text} ${STATUS_COLORS.ditutup.border}`
+      : isRejected
       ? `${STATUS_COLORS.ditolak.bg} ${STATUS_COLORS.ditolak.text} ${STATUS_COLORS.ditolak.border}`
       : isApproved
       ? `${STATUS_COLORS.disetujui.bg} ${STATUS_COLORS.disetujui.text} ${STATUS_COLORS.disetujui.border}`
@@ -327,12 +349,21 @@ function TrackingContent() {
             </span>
           </div>
 
-          <TrackingStepper label="Tahapan klaim" steps={CLAIM_STEPS} statusIndex={statusIndex} isFinished={isHandedOver} isStopped={isRejected} />
+          <TrackingStepper
+            label="Tahapan klaim"
+            steps={CLAIM_STEPS}
+            statusIndex={statusIndex}
+            isFinished={isHandedOver}
+            isStopped={isRejected || isClosed}
+            stopTone={isClosed ? 'neutral' : 'danger'}
+          />
 
           <div className={`space-y-4 rounded-surface border p-4 sm:p-5 ${panelTone}`}>
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
               <div className="flex items-start gap-3">
-                {isRejected ? (
+                {isClosed ? (
+                  <Archive className={`mt-0.5 size-5 shrink-0 ${titleTone}`} aria-hidden="true" />
+                ) : isRejected ? (
                   <XCircle className={`mt-0.5 size-5 shrink-0 ${titleTone}`} aria-hidden="true" />
                 ) : isHandedOver ? (
                   <CheckCircle2 className={`mt-0.5 size-5 shrink-0 ${titleTone}`} aria-hidden="true" />
@@ -342,27 +373,36 @@ function TrackingContent() {
                 <div>
                   <h3 className={`text-sm font-semibold ${titleTone}`}>Status klaim: {statusLabel}</h3>
                   <p className="mt-1 text-pretty text-[13px] leading-5 text-body">{description}</p>
-                  {claim.pickup_location && (
-                    <p className="mt-1 text-[13px] font-medium text-body">Lokasi pengambilan: {claim.pickup_location}</p>
-                  )}
                 </div>
               </div>
               {isApproved && !isHandedOver && isClaimOwner && (
-                <div className="shrink-0 rounded-surface border border-line bg-surface p-3">
+                <div className="flex shrink-0 flex-col items-center gap-2 self-center rounded-surface border border-line bg-surface p-3">
                   <QRCode value={claim.ticket_code} size={112} />
-                  <p className="mt-2 text-center text-xs font-medium text-muted">Tunjukkan saat pengambilan</p>
+                  <p className="text-center text-xs font-medium text-muted">Tunjukkan saat pengambilan</p>
                 </div>
               )}
             </div>
 
-            {isApproved && !isHandedOver && (
-              <div className="space-y-1 rounded-surface border border-success/20 bg-surface px-4 py-3">
-                <p className="text-[13px] font-semibold text-success">Ambil pada jam kerja kantor</p>
-                <p className="text-pretty text-[13px] leading-5 text-body">{PICKUP_INSTRUCTIONS}</p>
+            {(isRejected || isClosed) && claim.decision_note && (
+              <div className="rounded-surface border border-line bg-surface px-4 py-3">
+                <p className="text-[13px] font-semibold text-ink">Catatan dari petugas</p>
+                <p className="mt-1 text-pretty text-[13px] leading-5 text-body">{claim.decision_note}</p>
               </div>
             )}
 
-            {isRejected && (
+            {isClaimOwner && isRejected && itemAvailable && (
+              <div className="space-y-1.5 rounded-surface border border-line bg-surface px-4 py-3">
+                <p className="text-[13px] font-semibold text-ink">Barang masih tersedia</p>
+                <p className="text-pretty text-[13px] leading-5 text-body">
+                  Kamu bisa mengajukan satu klaim ulang. Jelaskan apa yang berubah atau bukti tambahan yang belum kamu kirim sebelumnya.
+                </p>
+                <Link href={`/barang/${claim.item_id}`} className="btn-secondary mt-1 inline-flex">
+                  Ajukan Klaim Ulang
+                </Link>
+              </div>
+            )}
+
+            {(isRejected || isClosed) && (
               <ContactStaffButton
                 reference={claim.ticket_code}
                 itemTitle={claimItem?.title || claim.item?.title || 'Barang temuan'}
@@ -475,6 +515,15 @@ function TrackingContent() {
 
         <TrackingStepper label="Tahapan laporan" steps={steps} statusIndex={statusIndex} isFinished={report.status === 'selesai'} isStopped={false} />
 
+        {report.type === 'temuan' && report.status === 'aktif' && (
+          <HandoverInfoCard
+            title="Serahkan barang temuan ke posko"
+            location={DEFAULT_PICKUP_LOCATION}
+            bring="ID karyawan/KTP dan barang temuan"
+            note="Tunjukkan nomor laporan ini ke petugas agar barang langsung diverifikasi."
+          />
+        )}
+
         <div className={`flex flex-col justify-between gap-4 rounded-surface border p-4 sm:flex-row sm:items-center sm:p-5 ${reportTone.bg} ${reportTone.border}`}>
           <div className="flex items-start gap-3 sm:items-center">
             <CheckCircle2 className={`mt-0.5 size-5 shrink-0 sm:mt-0 ${reportTone.text}`} aria-hidden="true" />
@@ -483,7 +532,7 @@ function TrackingContent() {
               <p className="mt-1 text-pretty text-[13px] leading-5 text-body">{description}</p>
               {claim && (
                 <p className="mt-1 text-[13px] leading-5 text-body">
-                  Status klaim: {CLAIM_STATUS_LABELS[claim.status]} · Tiket pengambilan: <span className="tabular-nums">{claim.ticket_code}</span>{' '}
+                  Status klaim: {getClaimStatusLabel(claim.status, claim.pickup_at)} · Tiket pengambilan: <span className="tabular-nums">{claim.ticket_code}</span>{' '}
                   <Link href={`/lacak?ticket=${claim.ticket_code}`} className="font-semibold text-accent underline decoration-accent/40 underline-offset-2 transition-colors hover:text-brand">
                     Lihat tiket
                   </Link>
@@ -492,16 +541,22 @@ function TrackingContent() {
             </div>
           </div>
           {shouldVisitPost && (
-            <div className="shrink-0 space-y-1 rounded-surface border border-line bg-surface px-4 py-3 sm:max-w-xs">
-              <p className="text-sm font-semibold text-ink">Datang ke {DEFAULT_PICKUP_LOCATION}</p>
-              <p className="text-pretty text-[13px] leading-5 text-body">Lokasi kantor: {OFFICE_ADDRESS}. Bawa ID card/KTP dan sebutkan ciri khusus barang untuk verifikasi serah terima.</p>
-              <Link href="/bantuan" className="inline-flex min-h-9 items-center gap-1.5 text-[13px] font-semibold text-accent transition-colors hover:text-brand">
-                Panduan pengambilan <ArrowRight className="size-3.5" aria-hidden="true" />
-              </Link>
+            <div className="w-full shrink-0 sm:max-w-xs">
+              <HandoverInfoCard
+                title="Datang ambil barang"
+                actionLabel="Ambil di"
+                location={report.storage_location ?? DEFAULT_PICKUP_LOCATION}
+                note="Tunjukkan nomor laporan ini ke petugas, lalu sebutkan ciri khusus barang saat verifikasi."
+                linkLabel="Panduan pengambilan"
+              />
             </div>
           )}
         </div>
       </div>
+
+      {report.type === 'hilang' && report.status === 'aktif' && (
+        <NewFoundItemsDigest key={report.id} since={report.incident_at} />
+      )}
 
       <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
         <div className="space-y-6 rounded-card border border-line bg-surface p-5 sm:p-8 lg:col-span-8">

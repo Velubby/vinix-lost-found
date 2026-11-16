@@ -27,5 +27,4 @@ export const PICKUP_LOCATIONS: string[] = [
 
 export const DEFAULT_PICKUP_LOCATION = PICKUP_LOCATIONS[0];
 
-export const PICKUP_INSTRUCTIONS =
-  'Pengambilan dilakukan pada jam kerja kantor. Datang ke lokasi yang tertera pada tiket dengan membawa ID karyawan/KTP dan tunjukkan tiket klaim kepada petugas.';
+export const OFFICE_HOURS = 'Senin–Jumat, 08.00–17.00';

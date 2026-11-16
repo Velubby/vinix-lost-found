@@ -1,13 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import {
   Plus,
   FileEdit,
-  Trash2,
   MapPin,
   Tag,
   Copy,
@@ -21,6 +20,9 @@ import {
   HandHeart,
   Ticket,
   Bell,
+  XCircle,
+  Archive,
+  ArrowRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -31,38 +33,20 @@ import {
   type ClaimRow,
   type ReportStatus,
 } from '@/lib/supabase/reports';
-import { REPORT_STATUS_COLORS, STATUS_COLORS } from '@/types/claims';
-import { Button } from '@/components/ui/Button';
+import {
+  getClaimStatusLabel,
+  getReportStatusLabel,
+  REPORT_STATUS_COLORS,
+  REPORT_TYPE_STATUS_LABELS,
+  STATUS_COLORS,
+} from '@/types/claims';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ContactStaffButton } from '@/components/ContactStaffButton';
+import { DEFAULT_PICKUP_LOCATION, OFFICE_HOURS } from '@/lib/locations';
 
 type CategoryTab = 'hilang' | 'temuan' | 'klaim';
-type FilterStatus = 'semua' | ReportStatus;
-
-const REPORT_STATUS_LABELS: Record<UserReportRow['type'], Record<ReportStatus, string>> = {
-  hilang: {
-    aktif: 'Dalam Pencarian',
-    ditemukan: 'Ditemukan di Posko',
-    selesai: 'Selesai (Diserahkan)',
-    klaim: 'Proses Klaim',
-    draf: 'Draf',
-  },
-  temuan: {
-    aktif: 'Menunggu Penyerahan',
-    ditemukan: 'Menunggu Klaim',
-    selesai: 'Selesai (Diserahkan)',
-    klaim: 'Verifikasi Klaim',
-    draf: 'Draf',
-  },
-};
-
-const CLAIM_STATUS_LABELS: Record<ClaimRow['status'], string> = {
-  diajukan: 'Menunggu Verifikasi',
-  ditinjau: 'Sedang Ditinjau',
-  disetujui: 'Disetujui · Siap Diambil',
-  ditolak: 'Ditolak',
-};
+type FilterStatus = 'semua' | Exclude<ReportStatus, 'draf'>;
 
 const CATEGORY_TABS: Array<{
   id: CategoryTab;
@@ -86,9 +70,11 @@ const CATEGORY_TABS: Array<{
   },
 ];
 
-export default function MyReportsPage() {
+function MyReportsContent() {
   const router = useRouter();
-  const [categoryTab, setCategoryTab] = useState<CategoryTab>('hilang');
+  const searchParams = useSearchParams();
+  const initialTab: CategoryTab = searchParams.get('tab') === 'klaim' ? 'klaim' : 'hilang';
+  const [categoryTab, setCategoryTab] = useState<CategoryTab>(initialTab);
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('semua');
   const [reports, setReports] = useState<UserReportRow[]>([]);
   const [claims, setClaims] = useState<ClaimRow[]>([]);
@@ -97,10 +83,11 @@ export default function MyReportsPage() {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   useEffect(() => {
+    const nextPath = initialTab === 'klaim' ? '/laporan-saya?tab=klaim' : '/laporan-saya';
     fetchUserReports()
       .then(({ user, reports: userReports, claims: userClaims }) => {
         if (!user) {
-          router.replace('/masuk?next=/laporan-saya');
+          router.replace(`/masuk?${new URLSearchParams({ next: nextPath })}`);
           return;
         }
         setReports(userReports);
@@ -108,7 +95,7 @@ export default function MyReportsPage() {
       })
       .catch(() => setError('Laporan belum dapat dimuat. Coba muat ulang halaman.'))
       .finally(() => setIsLoading(false));
-  }, [router]);
+  }, [router, initialTab]);
 
   const handleCopyCode = (code: string) => {
     navigator.clipboard.writeText(code);
@@ -117,20 +104,9 @@ export default function MyReportsPage() {
     setTimeout(() => setCopiedCode(null), 2000);
   };
 
-  const deleteDraft = async (reportId: string) => {
-    const { createClient } = await import('@/lib/supabase/client');
-    const { error: deleteError } = await createClient().from('reports').delete().eq('id', reportId);
-    if (deleteError) {
-      toast.error('Draf belum dapat dihapus.');
-      return;
-    }
-    toast.success('Draf laporan berhasil dihapus.');
-    setReports((current) => current.filter((report) => report.id !== reportId));
-  };
-
   // Counts per Category
-  const lostReports = useMemo(() => reports.filter((r) => r.type === 'hilang'), [reports]);
-  const foundReports = useMemo(() => reports.filter((r) => r.type === 'temuan'), [reports]);
+  const lostReports = useMemo(() => reports.filter((r) => r.type === 'hilang' && r.status !== 'draf'), [reports]);
+  const foundReports = useMemo(() => reports.filter((r) => r.type === 'temuan' && r.status !== 'draf'), [reports]);
 
   const activeLostCount = useMemo(() => lostReports.filter((r) => r.status === 'aktif' || r.status === 'ditemukan').length, [lostReports]);
   const activeFoundCount = useMemo(() => foundReports.filter((r) => r.status === 'aktif' || r.status === 'ditemukan').length, [foundReports]);
@@ -241,8 +217,8 @@ export default function MyReportsPage() {
         <section aria-label="Filter Status Laporan" className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <span className="mr-1 text-xs font-semibold text-muted">Status:</span>
-            {(['semua', 'aktif', 'ditemukan', 'selesai', 'draf'] as FilterStatus[]).map((st) => {
-              const statusLabels = REPORT_STATUS_LABELS[categoryTab === 'temuan' ? 'temuan' : 'hilang'];
+            {(['semua', 'aktif', 'ditemukan', 'selesai'] as FilterStatus[]).map((st) => {
+              const statusLabels = REPORT_TYPE_STATUS_LABELS[categoryTab === 'temuan' ? 'temuan' : 'hilang'];
               const label = st === 'semua' ? 'Semua Status' : statusLabels[st];
               const count = st === 'semua' ? currentCategoryReports.length : currentCategoryReports.filter((r) => r.status === st).length;
 
@@ -293,10 +269,10 @@ export default function MyReportsPage() {
                       <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-info" aria-hidden="true" />
                       <div className="space-y-0.5">
                         <strong className="block text-[13px] font-semibold text-ink">
-                          Kabar Baik! Barang Anda telah ditemukan dan diamankan di pos/penyimpanan.
+                          Kabar baik! Barang Anda telah ditemukan dan disimpan.
                         </strong>
                         <span className="block text-pretty text-[13px] leading-5 text-body">
-                          Silakan datang ke pos penyimpanan/pengambilan dengan membawa kartu identitas (ID karyawan/KTP) dan sebutkan ciri khusus barang untuk proses verifikasi serah terima.
+                          Silakan ambil di <strong className="font-semibold text-ink">{report.storage_location ?? DEFAULT_PICKUP_LOCATION}</strong> pada jam layanan {OFFICE_HOURS}. Bawa ID karyawan/KTP dan sebutkan ciri khusus barang saat verifikasi.
                         </span>
                       </div>
                     </div>
@@ -363,7 +339,7 @@ export default function MyReportsPage() {
                             className={`inline-flex items-center gap-1.5 rounded-pill border px-2.5 py-0.5 text-[11px] font-semibold ${statusTone.bg} ${statusTone.text} ${statusTone.border}`}
                           >
                             <span className={`size-1.5 rounded-full ${statusTone.dot}`} aria-hidden="true" />
-                            {REPORT_STATUS_LABELS[report.type][report.status]}
+                            {getReportStatusLabel(report.type, report.status)}
                           </span>
                         </div>
 
@@ -375,6 +351,14 @@ export default function MyReportsPage() {
                           <p className="mt-1 line-clamp-2 max-w-xl text-pretty text-[13px] leading-5 text-body">
                             {report.public_description}
                           </p>
+                          {report.type === 'hilang' && report.status === 'aktif' && (
+                            <Link
+                              href={`/lacak?report=${report.id}#barang-temuan-baru`}
+                              className="mt-2 inline-flex min-h-11 items-center gap-1 rounded-control text-[13px] font-semibold text-accent transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                            >
+                              Cek barang temuan baru <ArrowRight className="size-3.5" aria-hidden="true" />
+                            </Link>
+                          )}
                         </div>
 
                         {/* Location & Dates */}
@@ -397,30 +381,12 @@ export default function MyReportsPage() {
 
                     {/* Action buttons */}
                     <div className="flex w-full shrink-0 flex-wrap items-center gap-2 border-t border-line pt-3 sm:flex-col sm:items-end lg:w-auto lg:border-t-0 lg:pt-0">
-                      {report.status !== 'draf' && (
-                        <Link
-                          href={`/lacak?report=${report.id}`}
-                          className="btn-primary w-full sm:w-56"
-                        >
-                          <span>Lacak Status &amp; Linimasa</span>
-                        </Link>
-                      )}
-
-                      {report.status === 'draf' && (
-                        <div className="flex w-full items-center gap-2 sm:w-auto">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => deleteDraft(report.id)}
-                            className="min-h-10 border-danger/30 text-danger hover:bg-danger-soft"
-                            title="Hapus draf laporan"
-                          >
-                            <Trash2 className="mr-1 size-4" aria-hidden="true" />
-                            <span>Hapus Draf</span>
-                          </Button>
-                        </div>
-                      )}
+                      <Link
+                        href={`/lacak?report=${report.id}`}
+                        className="btn-primary w-full sm:w-56"
+                      >
+                        <span>Lacak Status &amp; Linimasa</span>
+                      </Link>
 
                       <ContactStaffButton
                         reference={report.report_code}
@@ -464,6 +430,7 @@ export default function MyReportsPage() {
           {claims.length > 0 ? (
             claims.map((claim) => {
               const statusTone = STATUS_COLORS[claim.status];
+              const itemAvailable = Boolean(claim.item?.status?.toLowerCase().includes('ditemukan'));
 
               return (
                 <article
@@ -471,16 +438,67 @@ export default function MyReportsPage() {
                   className="rounded-card border border-line bg-surface p-5 sm:p-6"
                 >
                   {/* Approval notification box */}
-                  {claim.status === 'disetujui' && (
+                  {claim.status === 'disetujui' && !claim.pickup_at && (
                     <div className="mb-4 flex items-start gap-3 rounded-surface border border-success/20 bg-success-soft p-4">
                       <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-success" aria-hidden="true" />
                       <div className="space-y-0.5">
                         <strong className="block text-[13px] font-semibold text-ink">
-                          Klaim Disetujui! Barang siap diambil di lokasi pengambilan.
+                          Klaim disetujui! Barang siap diambil.
                         </strong>
                         <span className="block text-pretty text-[13px] leading-5 text-body">
-                          Lokasi pengambilan: <strong className="font-semibold text-ink">{claim.pickup_location || 'Resepsionis / Lobi Utama VINIX7'}</strong>. Bawa ID card/KTP dan tunjukkan tiket ini kepada petugas.
+                          Lokasi pengambilan: <strong className="font-semibold text-ink">{claim.pickup_location || DEFAULT_PICKUP_LOCATION}</strong>. Datang pada jam layanan {OFFICE_HOURS} dengan membawa ID card/KTP dan tunjukkan tiket ini kepada petugas.
                         </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {claim.pickup_at && (
+                    <div className="mb-4 flex items-start gap-3 rounded-surface border border-line bg-surface-muted p-4">
+                      <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-success" aria-hidden="true" />
+                      <div className="space-y-0.5">
+                        <strong className="block text-[13px] font-semibold text-ink">
+                          Barang sudah diambil.
+                        </strong>
+                        <span className="block text-pretty text-[13px] leading-5 text-body">
+                          Serah terima selesai pada {formatDate(claim.pickup_at)}. Simpan tiket ini sebagai bukti pengambilan.
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {(claim.status === 'ditolak' || claim.status === 'ditutup') && (
+                    <div
+                      className={[
+                        'mb-4 flex items-start gap-3 rounded-surface border p-4',
+                        claim.status === 'ditolak'
+                          ? 'border-danger/20 bg-danger-soft'
+                          : 'border-line bg-surface-muted',
+                      ].join(' ')}
+                    >
+                      {claim.status === 'ditolak' ? (
+                        <XCircle className="mt-0.5 size-5 shrink-0 text-danger" aria-hidden="true" />
+                      ) : (
+                        <Archive className="mt-0.5 size-5 shrink-0 text-muted" aria-hidden="true" />
+                      )}
+                      <div className="min-w-0 space-y-1">
+                        <strong className="block text-[13px] font-semibold text-ink">
+                          {claim.status === 'ditolak' ? 'Klaim ditolak' : 'Klaim ditutup'}
+                        </strong>
+                        <span className="block text-pretty text-[13px] leading-5 text-body">
+                          {claim.decision_note ||
+                            (claim.status === 'ditolak'
+                              ? 'Ciri kepemilikan belum cocok dengan barang temuan.'
+                              : 'Barang sudah diklaim dan diserahkan kepada pemohon lain yang terverifikasi.')}
+                        </span>
+                        {claim.status === 'ditolak' && itemAvailable && (
+                          <Link
+                            href={`/barang/${claim.item_id}`}
+                            className="inline-flex min-h-9 items-center gap-1.5 pt-1 text-[13px] font-semibold text-accent transition-colors hover:text-brand"
+                          >
+                            Ajukan Klaim Ulang
+                            <ExternalLink className="size-3.5" aria-hidden="true" />
+                          </Link>
+                        )}
                       </div>
                     </div>
                   )}
@@ -508,7 +526,7 @@ export default function MyReportsPage() {
                           className={`inline-flex items-center gap-1.5 rounded-pill border px-2.5 py-0.5 text-[11px] font-semibold ${statusTone.bg} ${statusTone.text} ${statusTone.border}`}
                         >
                           <span className={`size-1.5 rounded-full ${statusTone.dot}`} aria-hidden="true" />
-                          {CLAIM_STATUS_LABELS[claim.status]}
+                          {getClaimStatusLabel(claim.status, claim.pickup_at)}
                         </span>
 
                         <span className="text-xs text-muted">
@@ -573,5 +591,19 @@ export default function MyReportsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function MyReportsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-7xl px-4 py-20 text-center text-sm text-muted sm:px-6 lg:px-8">
+          Memuat riwayat laporan dan tiket...
+        </div>
+      }
+    >
+      <MyReportsContent />
+    </Suspense>
   );
 }

@@ -15,6 +15,7 @@ import {
   Building2,
   ExternalLink,
   RefreshCw,
+  Archive,
 } from 'lucide-react';
 import type { Claim, FilterStatus, ClaimStats } from '@/types/claims';
 import { STATUS_LABELS } from '@/types/claims';
@@ -57,7 +58,7 @@ interface AdminClaimsViewProps {
   onRetry: () => void;
 }
 
-const FILTER_OPTIONS: FilterStatus[] = ['semua', 'diajukan', 'ditinjau', 'disetujui', 'ditolak'];
+const FILTER_OPTIONS: FilterStatus[] = ['semua', 'diajukan', 'ditinjau', 'disetujui', 'ditolak', 'ditutup'];
 
 export function AdminClaimsView({
   claims,
@@ -97,7 +98,9 @@ export function AdminClaimsView({
       ? stats?.underReview
       : status === 'disetujui'
       ? stats?.approved
-      : stats?.rejected;
+      : status === 'ditolak'
+      ? stats?.rejected
+      : stats?.closed;
 
   return (
     <div className="space-y-5">
@@ -318,6 +321,8 @@ export function AdminClaimsView({
                         <span className="flex size-5 items-center justify-center">
                           {claim.status === 'disetujui' ? (
                             <CheckCircle2 className="size-4 text-success" aria-hidden="true" />
+                          ) : claim.status === 'ditutup' ? (
+                            <Archive className="size-4 text-muted" aria-hidden="true" />
                           ) : (
                             <XCircle className="size-4 text-danger" aria-hidden="true" />
                           )}
@@ -406,6 +411,16 @@ export function AdminClaimsView({
                           </a>
                         )}
                       </div>
+
+                      {/* Decision note for rejected or auto-closed claims */}
+                      {(claim.status === 'ditolak' || claim.status === 'ditutup') && claim.decision_note && (
+                        <div className="mt-2 rounded-surface border border-line bg-surface-muted p-3 text-[13px] leading-5 text-body">
+                          <span className="font-semibold text-ink">
+                            {claim.status === 'ditolak' ? 'Alasan penolakan' : 'Alasan penutupan'}:
+                          </span>{' '}
+                          {claim.decision_note}
+                        </div>
+                      )}
 
                       {/* Pickup & handover info */}
                       {claim.status === 'disetujui' && claim.pickup_location && (

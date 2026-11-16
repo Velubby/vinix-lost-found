@@ -4,13 +4,15 @@ import { useState, useEffect, Suspense } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, MapPin, Calendar, Clock, ShieldCheck, CheckCircle2 } from 'lucide-react';
-import { fetchCatalogItemById, submitItemClaim, type CatalogItem } from '@/lib/supabase/items';
+import { ArrowLeft, MapPin, Calendar, Clock, ShieldCheck, CheckCircle2, Ticket } from 'lucide-react';
+import { fetchCatalogItemById, fetchItemClaimState, submitItemClaim, type CatalogItem, type ItemClaimState } from '@/lib/supabase/items';
 import { getCurrentUser, getUserProfile } from '@/lib/supabase/auth';
 import { validateIndonesianPhone, sanitizePhoneInput, validateCiriKhusus } from '@/lib/validation';
+import { getItemStatusLabel } from '@/types/claims';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { ContactStaffButton } from '@/components/ContactStaffButton';
 
 function statusTone(status: string) {
   const value = status.toLowerCase();
@@ -27,6 +29,18 @@ function ItemDetailContent() {
 
   const [item, setItem] = useState<CatalogItem | null>(null);
   const [itemError, setItemError] = useState('');
+  const [claimState, setClaimState] = useState<ItemClaimState>({
+    activeClaim: null,
+    claimCount: 0,
+    lastClaim: null,
+  });
+  const activeClaim = claimState.activeClaim;
+  const lastClaim = claimState.lastClaim;
+  const priorRejection = lastClaim?.status === 'ditolak' ? lastClaim : null;
+  const priorClosed = lastClaim?.status === 'ditutup' ? lastClaim : null;
+  const itemAvailable = Boolean(item?.status.toLowerCase().includes('ditemukan'));
+  const retryLimitReached = Boolean(priorRejection && claimState.claimCount >= 2);
+  const canRetryClaim = Boolean(priorRejection && itemAvailable && !retryLimitReached);
 
   useEffect(() => {
     fetchCatalogItemById(itemId)
@@ -35,6 +49,20 @@ function ItemDetailContent() {
         else setItemError('Barang tidak ditemukan.');
       })
       .catch(() => setItemError('Detail barang belum dapat dimuat.'));
+  }, [itemId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getCurrentUser()
+      .then(async (user) => {
+        if (!user) return;
+        const state = await fetchItemClaimState(itemId, user.id);
+        if (!cancelled) setClaimState(state);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [itemId]);
 
   // Modal claim state
@@ -51,6 +79,14 @@ function ItemDetailContent() {
 
   const handleOpenClaim = async () => {
     if (isCheckingAuth) return;
+    if (activeClaim) {
+      router.push(`/lacak?ticket=${activeClaim.ticket_code}`);
+      return;
+    }
+    if (retryLimitReached) {
+      toast.error('Batas klaim ulang sudah tercapai. Hubungi petugas dengan tiket klaim sebelumnya.');
+      return;
+    }
     setIsCheckingAuth(true);
 
     try {
@@ -158,8 +194,15 @@ function ItemDetailContent() {
       return;
     } catch (error) {
       if (error instanceof Error && error.message === 'DUPLICATE_CLAIM') {
-        setClaimError('Kamu sudah punya klaim aktif untuk barang ini. Cek tiket di halaman Lacak.');
-        toast.error('Kamu sudah punya klaim aktif untuk barang ini.');
+        const nextState = await fetchItemClaimState(item.id, user.id).catch(() => null);
+        if (nextState) setClaimState(nextState);
+        setIsClaimModalOpen(false);
+        toast.error('Kamu sudah punya klaim aktif untuk barang ini. Buka tiket klaim untuk melihat statusnya.');
+      } else if (error instanceof Error && error.message === 'RECLAIM_LIMIT') {
+        const nextState = await fetchItemClaimState(item.id, user.id).catch(() => null);
+        if (nextState) setClaimState(nextState);
+        setIsClaimModalOpen(false);
+        toast.error('Batas klaim ulang sudah tercapai. Hubungi petugas dengan tiket klaim sebelumnya.');
       } else {
         setClaimError('Klaim belum dapat disimpan. Coba lagi nanti.');
         toast.error('Klaim belum dapat disimpan. Coba lagi nanti.');
@@ -220,7 +263,7 @@ function ItemDetailContent() {
               className={`inline-flex items-center gap-1.5 rounded-pill px-2.5 py-1 text-xs font-semibold ${statusTone(item.status)}`}
             >
               <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
-              {item.status}
+              {getItemStatusLabel(item.status)}
             </span>
 
             <h1 className="text-balance text-[1.75rem] font-semibold leading-[1.2] tracking-tight text-ink sm:text-[2.125rem] sm:leading-[1.18]">
@@ -277,22 +320,86 @@ function ItemDetailContent() {
               </p>
             </div>
 
-            <Button
-              type="button"
-              onClick={handleOpenClaim}
-              disabled={isCheckingAuth}
-              loading={isCheckingAuth}
-              className="w-full"
-              size="lg"
-            >
-              {!isCheckingAuth && <ShieldCheck className="size-4" aria-hidden="true" />}
-              <span>{isCheckingAuth ? 'Memeriksa akun...' : 'Ajukan Klaim Kepemilikan'}</span>
-            </Button>
+            {activeClaim ? (
+              <div className="space-y-2.5">
+                <p className="text-pretty text-[13px] leading-5 text-body">
+                  Kamu sudah punya klaim aktif untuk barang ini dengan tiket{' '}
+                  <span className="font-semibold tabular-nums text-ink">{activeClaim.ticket_code}</span>.
+                </p>
+                <Link
+                  href={`/lacak?ticket=${activeClaim.ticket_code}`}
+                  className="btn-primary w-full"
+                >
+                  <Ticket className="size-4" aria-hidden="true" />
+                  <span>Buka Tiket Klaim</span>
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {priorRejection && (
+                  <div className="rounded-surface border border-danger/20 bg-danger-soft p-3.5">
+                    <p className="text-[13px] font-semibold text-ink">Klaim sebelumnya ditolak</p>
+                    <p className="mt-1 text-pretty text-[13px] leading-5 text-body">
+                      {priorRejection.decision_note || 'Ciri kepemilikan belum cocok dengan barang temuan.'}
+                    </p>
+                  </div>
+                )}
+
+                {priorClosed && (
+                  <div className="rounded-surface border border-line bg-surface-muted p-3.5">
+                    <p className="text-[13px] font-semibold text-ink">Klaim sebelumnya ditutup</p>
+                    <p className="mt-1 text-pretty text-[13px] leading-5 text-body">
+                      {priorClosed.decision_note || 'Barang sudah diklaim dan diserahkan kepada pemohon lain yang terverifikasi.'}
+                    </p>
+                  </div>
+                )}
+
+                {retryLimitReached && (
+                  <p className="text-pretty text-[13px] leading-5 text-body">
+                    Kamu sudah memakai satu kesempatan klaim ulang untuk barang ini. Hubungi petugas dengan membawa tiket klaim sebelumnya.
+                  </p>
+                )}
+
+                {priorRejection && !itemAvailable && !retryLimitReached && (
+                  <p className="text-pretty text-[13px] leading-5 text-body">
+                    Barang ini sudah tidak tersedia untuk klaim ulang.
+                  </p>
+                )}
+
+                {(canRetryClaim || (!priorRejection && !priorClosed)) && (
+                  <>
+                    <Button
+                      type="button"
+                      onClick={handleOpenClaim}
+                      disabled={isCheckingAuth}
+                      loading={isCheckingAuth}
+                      className="w-full"
+                      size="lg"
+                    >
+                      {!isCheckingAuth && <ShieldCheck className="size-4" aria-hidden="true" />}
+                      <span>
+                        {isCheckingAuth
+                          ? 'Memeriksa akun...'
+                          : canRetryClaim
+                          ? 'Ajukan Klaim Ulang'
+                          : 'Ajukan Klaim Kepemilikan'}
+                      </span>
+                    </Button>
+                    {canRetryClaim && (
+                      <p className="text-pretty text-xs leading-5 text-muted">
+                        Jelaskan apa yang berubah atau bukti tambahan yang belum kamu kirim sebelumnya.
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
-          <p className="text-center text-xs leading-5 text-muted">
-            Butuh bantuan langsung? Hubungi petugas melalui email layanan kantor.
-          </p>
+          <div className="space-y-2 text-center">
+            <p className="text-xs leading-5 text-muted">Butuh bantuan sebelum mengajukan klaim?</p>
+            <ContactStaffButton itemTitle={item.title} className="w-full" />
+          </div>
         </div>
       </div>
 

@@ -3,7 +3,7 @@
  * Used across server actions, hooks, and components
  */
 
-export type ClaimStatus = 'diajukan' | 'ditinjau' | 'disetujui' | 'ditolak';
+export type ClaimStatus = 'diajukan' | 'ditinjau' | 'disetujui' | 'ditolak' | 'ditutup';
 export type FilterStatus = ClaimStatus | 'semua';
 
 export interface ClaimItem {
@@ -32,6 +32,7 @@ export interface Claim {
   user_id: string;
   private_answers: string;
   contact_phone: string;
+  decision_note?: string | null;
   status: ClaimStatus;
   ticket_code: string;
   pickup_location: string | null;
@@ -53,15 +54,16 @@ export interface ClaimsResponse {
 
 export interface UpdateClaimInput {
   claimId: string;
-  status: Exclude<ClaimStatus, 'diajukan'>;
+  status: Exclude<ClaimStatus, 'diajukan' | 'ditutup'>;
   pickupLocation?: string;
   rejectReason?: string;
 }
 
 export interface BulkUpdateInput {
   claimIds: string[];
-  status: Exclude<ClaimStatus, 'diajukan'>;
+  status: Exclude<ClaimStatus, 'diajukan' | 'ditutup'>;
   pickupLocation?: string;
+  rejectReason?: string;
 }
 
 export interface ClaimStats {
@@ -70,6 +72,7 @@ export interface ClaimStats {
   underReview: number;
   approved: number;
   rejected: number;
+  closed: number;
 }
 
 export const STATUS_LABELS: Record<FilterStatus, string> = {
@@ -78,6 +81,7 @@ export const STATUS_LABELS: Record<FilterStatus, string> = {
   ditinjau: 'Ditinjau',
   disetujui: 'Disetujui',
   ditolak: 'Ditolak',
+  ditutup: 'Ditutup',
 };
 
 export const STATUS_COLORS: Record<ClaimStatus, { bg: string; text: string; dot: string; border: string }> = {
@@ -85,6 +89,7 @@ export const STATUS_COLORS: Record<ClaimStatus, { bg: string; text: string; dot:
   ditinjau: { bg: 'bg-info-soft', text: 'text-info', dot: 'bg-info', border: 'border-info/20' },
   disetujui: { bg: 'bg-success-soft', text: 'text-success', dot: 'bg-success', border: 'border-success/20' },
   ditolak: { bg: 'bg-danger-soft', text: 'text-danger', dot: 'bg-danger', border: 'border-danger/20' },
+  ditutup: { bg: 'bg-surface-muted', text: 'text-body', dot: 'bg-muted', border: 'border-line' },
 };
 
 export type ReportStatus = 'draf' | 'aktif' | 'ditemukan' | 'klaim' | 'selesai';
@@ -127,3 +132,50 @@ export const REPORT_STATUS_COLORS: Record<ReportStatus, { bg: string; text: stri
   klaim: { bg: 'bg-accent/10', text: 'text-accent', dot: 'bg-accent', border: 'border-accent/20' },
   selesai: { bg: 'bg-success-soft', text: 'text-success', dot: 'bg-success', border: 'border-success/20' },
 };
+
+// The same report status means different things to a finder and an owner, so
+// user-facing pages share this map instead of each page inventing its own.
+export const REPORT_TYPE_STATUS_LABELS: Record<LostReport['type'], Record<ReportStatus, string>> = {
+  hilang: {
+    draf: 'Draf',
+    aktif: 'Dalam Pencarian',
+    ditemukan: 'Barang Ditemukan',
+    klaim: 'Proses Klaim',
+    selesai: 'Selesai (Diserahkan)',
+  },
+  temuan: {
+    draf: 'Draf',
+    aktif: 'Menunggu Penyerahan',
+    ditemukan: 'Menunggu Klaim',
+    klaim: 'Verifikasi Klaim',
+    selesai: 'Selesai (Diserahkan)',
+  },
+};
+
+export function getReportStatusLabel(type: LostReport['type'], status: ReportStatus): string {
+  return REPORT_TYPE_STATUS_LABELS[type][status];
+}
+
+const CLAIM_STATUS_TEXT: Record<ClaimStatus, string> = {
+  diajukan: 'Menunggu verifikasi',
+  ditinjau: 'Sedang ditinjau',
+  disetujui: 'Disetujui, siap diambil',
+  ditolak: 'Ditolak',
+  ditutup: 'Ditutup, barang sudah diklaim',
+};
+
+export function getClaimStatusLabel(status: ClaimStatus, pickupAt?: string | null): string {
+  if (status === 'disetujui' && pickupAt) return 'Selesai, sudah diambil';
+  return CLAIM_STATUS_TEXT[status];
+}
+
+const ITEM_STATUS_LABELS: Record<string, string> = {
+  'Menunggu Penyerahan': 'Menunggu Penyerahan',
+  Ditemukan: 'Tersedia untuk Diklaim',
+  'Klaim Disetujui': 'Klaim Disetujui',
+  Selesai: 'Selesai',
+};
+
+export function getItemStatusLabel(status: string): string {
+  return ITEM_STATUS_LABELS[status] ?? status;
+}

@@ -64,9 +64,10 @@ function SearchContent() {
         : new Date(now - Number(timeRange) * 24 * 60 * 60 * 1000);
 
     return items.filter(item => {
-      // Exclude items that are claimed, approved, or completed
+      // Claimed or handed-over items stay out of the catalog. Older values
+      // ("diklaim", "disetujui") never matched the stored status text.
       const itemStatus = (item as CatalogItem & { status?: string }).status;
-      if (itemStatus && ['diklaim', 'disetujui', 'selesai', 'menunggu penyerahan'].includes(itemStatus.toLowerCase())) {
+      if (itemStatus && ['klaim disetujui', 'selesai', 'menunggu penyerahan'].includes(itemStatus.toLowerCase())) {
         return false;
       }
 

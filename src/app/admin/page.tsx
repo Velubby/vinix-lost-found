@@ -22,9 +22,10 @@ import { AdminItemImage } from './components/AdminItemImage';
 import { AdminReportsView } from './components/AdminReportsView';
 import { ClaimDetailModal } from './components/ClaimDetailModal';
 import { RejectClaimModal } from './components/RejectClaimModal';
-import { CustodyChainModal } from './components/CustodyChainModal';
 import { LostReportDetailModal } from './components/LostReportDetailModal';
-import { DEFAULT_PICKUP_LOCATION, PICKUP_LOCATIONS } from '@/lib/locations';
+import { ClaimRejectionFields } from './components/ClaimRejectionFields';
+import { CLAIM_REJECTION_REASONS, composeDecisionNote } from '@/lib/claim-reasons';
+import { DEFAULT_PICKUP_LOCATION, OFFICE_HOURS, PICKUP_LOCATIONS } from '@/lib/locations';
 
 const QUICK_LOCATIONS = PICKUP_LOCATIONS;
 
@@ -59,13 +60,14 @@ export default function AdminPage() {
   const [isBulkApproveOpen, setIsBulkApproveOpen] = useState(false);
   const [bulkPickupLocation, setBulkPickupLocation] = useState(DEFAULT_PICKUP_LOCATION);
   const [isBulkRejectOpen, setIsBulkRejectOpen] = useState(false);
+  const [bulkRejectPreset, setBulkRejectPreset] = useState<string>(CLAIM_REJECTION_REASONS[0].value);
+  const [bulkRejectNote, setBulkRejectNote] = useState('');
 
   // Report Modals State
   const [viewingReport, setViewingReport] = useState<LostReport | null>(null);
   const [markingFoundReport, setMarkingFoundReport] = useState<LostReport | null>(null);
   const [completingReport, setCompletingReport] = useState<LostReport | null>(null);
   const [isUpdatingReport, setIsUpdatingReport] = useState(false);
-  const [confirmingReportId, setConfirmingReportId] = useState<string | null>(null);
 
   // Copy Feedback
   const [copiedTicket, setCopiedTicket] = useState<string | null>(null);
@@ -155,6 +157,8 @@ export default function AdminPage() {
       setIsBulkApproveOpen(false);
       setIsBulkRejectOpen(false);
       setBulkPickupLocation(DEFAULT_PICKUP_LOCATION);
+      setBulkRejectPreset(CLAIM_REJECTION_REASONS[0].value);
+      setBulkRejectNote('');
     },
     onError: (err) => {
       toast.error(err.message || 'Gagal memperbarui klaim secara massal');
@@ -277,6 +281,7 @@ export default function AdminPage() {
     bulkUpdateMutation.mutate({
       claimIds: selectedIds,
       status: 'ditolak',
+      rejectReason: composeDecisionNote(bulkRejectPreset, bulkRejectNote),
     });
   };
 
@@ -287,25 +292,21 @@ export default function AdminPage() {
     });
   };
 
-  const handleConfirmMarkFound = async (data: {
-    finderName: string;
-    foundLocation: string;
-    storageLocation: string;
-    note: string;
-  }) => {
+  const handleConfirmMarkFound = async () => {
     if (!markingFoundReport) return;
     setIsUpdatingReport(true);
     try {
       const res = await updateReportStatusAction({
         reportId: markingFoundReport.id,
         status: 'ditemukan',
-        finderName: data.finderName || undefined,
-        foundLocation: data.foundLocation || undefined,
-        storageLocation: data.storageLocation || undefined,
-        note: data.note || undefined,
+        storageLocation: DEFAULT_PICKUP_LOCATION,
       });
       if (res.success) {
-        toast.success('Barang berhasil dicatat & status diubah ke "Ditemukan"');
+        toast.success(
+          markingFoundReport.type === 'temuan'
+            ? `Barang "${markingFoundReport.item_title}" diterima di pos dan tampil di katalog.`
+            : `Barang "${markingFoundReport.item_title}" ditandai ditemukan dan disimpan.`
+        );
         if (viewingReport && viewingReport.id === markingFoundReport.id) {
           setViewingReport((prev) => (prev ? { ...prev, status: 'ditemukan' } : null));
         }
@@ -355,35 +356,8 @@ export default function AdminPage() {
     if (!report.contact_phone) return null;
     const phone = report.contact_phone.replace(/^0/, '62').replace(/[^0-9]/g, '');
     const reporterName = report.reporter?.full_name || 'Pelapor';
-    const text = `Halo Sdr/i ${reporterName},\nKami dari petugas Lost & Found kantor menginfokan bahwa barang yang sesuai dengan laporan kehilangan Anda ("${report.item_title}", No. Laporan: ${report.report_code}) telah ditemukan dan diamankan.\n\nSilakan datang ke lokasi pengambilan/penyimpanan yang diinformasikan dengan membawa kartu identitas (ID karyawan/KTP) dan bersiap menyebutkan/membuktikan ciri kepemilikan barang untuk proses serah terima.\n\nTerima kasih.`;
+    const text = `Halo Sdr/i ${reporterName},\nKami dari petugas Lost & Found kantor menginfokan bahwa barang yang sesuai dengan laporan kehilangan Anda ("${report.item_title}", No. Laporan: ${report.report_code}) telah ditemukan dan diamankan.\n\nSilakan datang ke ${DEFAULT_PICKUP_LOCATION} pada jam layanan ${OFFICE_HOURS} dengan membawa kartu identitas (ID karyawan/KTP) dan bersiap menyebutkan/membuktikan ciri kepemilikan barang untuk proses serah terima.\n\nTerima kasih.`;
     return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
-  };
-
-  const handleConfirmItemHandover = async (report: LostReport) => {
-    setConfirmingReportId(report.id);
-    try {
-      const res = await updateReportStatusAction({
-        reportId: report.id,
-        status: 'ditemukan',
-        finderName: report.reporter?.full_name || 'Pelapor/Petugas',
-        storageLocation: DEFAULT_PICKUP_LOCATION,
-        note: 'Barang diterima dan diverifikasi oleh petugas di posko',
-      });
-
-      if (res.success) {
-        toast.success(`Barang "${report.item_title}" berhasil dikonfirmasi dan dimasukkan ke katalog.`);
-        await queryClient.invalidateQueries({ queryKey: ['lostReports'] });
-        await queryClient.invalidateQueries({ queryKey: ['adminTabCounts'] });
-        router.refresh();
-      } else {
-        toast.error(res.error || 'Gagal mengonfirmasi penyerahan barang');
-      }
-    } catch (err) {
-      console.error('Error confirming item handover:', err);
-      toast.error('Terjadi kesalahan saat mengonfirmasi barang');
-    } finally {
-      setConfirmingReportId(null);
-    }
   };
 
   const handleRefresh = () => {
@@ -431,7 +405,7 @@ export default function AdminPage() {
           activeTab === 'klaim'
             ? 'Cocokkan ciri rahasia dari pemohon sebelum menyetujui serah terima barang temuan.'
             : activeTab === 'konfirmasi'
-            ? 'Daftar barang temuan yang dilaporkan karyawan dan menunggu verifikasi fisik di pos/penyimpanan.'
+            ? 'Daftar barang temuan yang dilaporkan karyawan dan belum dikonfirmasi diterima di pos/penyimpanan.'
             : 'Pantau dan kelola laporan kehilangan yang diajukan karyawan.'
         }
         actions={
@@ -564,15 +538,14 @@ export default function AdminPage() {
                     <div className="flex w-full shrink-0 flex-col gap-2.5 border-t border-line pt-4 sm:flex-row sm:items-center lg:w-auto lg:border-t-0 lg:pt-0">
                       <span className="inline-flex w-fit items-center gap-1.5 rounded-pill border border-warning/20 bg-warning-soft px-2.5 py-1 text-[11px] font-semibold text-warning">
                         <span className="size-1.5 rounded-full bg-warning" aria-hidden="true" />
-                        Menunggu Penyerahan
+                        Belum Diterima di Pos
                       </span>
                       <Button
                         type="button"
-                        onClick={() => handleConfirmItemHandover(report)}
-                        loading={confirmingReportId === report.id}
+                        onClick={() => setMarkingFoundReport(report)}
                         className="w-full sm:w-auto"
                       >
-                        {confirmingReportId === report.id ? 'Memproses...' : 'Tandai Diterima di Pos'}
+                        Tandai Diterima di Pos
                       </Button>
                     </div>
                   </div>
@@ -655,7 +628,6 @@ export default function AdminPage() {
         onRejectModalOpen={setRejectingClaim}
         onReopenReview={(claimId) => {
           handleSingleUpdate(claimId, 'ditinjau');
-          setViewingClaim((prev) => (prev ? { ...prev, status: 'ditinjau' } : null));
         }}
         isPending={updateClaimMutation.isPending}
         onMarkHandedOver={handleMarkHandedOver}
@@ -732,17 +704,46 @@ export default function AdminPage() {
         </div>
       </Modal>
 
-      <ConfirmModal
+      <Modal
         open={isBulkRejectOpen}
         onOpenChange={setIsBulkRejectOpen}
         title="Tolak Klaim Terpilih"
-        message={`Apakah Anda yakin ingin menolak ${selectedIds.length} klaim sekaligus? Tindakan ini tidak dapat dibatalkan.`}
-        confirmText={`Tolak ${selectedIds.length} Klaim`}
-        cancelText="Batal"
-        variant="destructive"
-        loading={bulkUpdateMutation.isPending}
-        onConfirm={handleBulkReject}
-      />
+        description={`Alasan yang sama akan dicatat untuk ${selectedIds.length} klaim terpilih.`}
+        size="md"
+      >
+        <div className="space-y-5">
+          <div className="rounded-surface border border-warning/20 bg-warning-soft p-3.5 text-[13px] leading-5 text-body">
+            Pemohon akan melihat alasan ini di halaman lacak. Pastikan alasan sesuai untuk semua klaim yang dipilih.
+          </div>
+
+          <ClaimRejectionFields
+            preset={bulkRejectPreset}
+            note={bulkRejectNote}
+            onPresetChange={setBulkRejectPreset}
+            onNoteChange={setBulkRejectNote}
+            idPrefix="bulk-reject"
+          />
+
+          <div className="flex flex-col-reverse gap-2.5 border-t border-line pt-4 sm:flex-row sm:justify-end">
+            <Button
+              variant="secondary"
+              onClick={() => setIsBulkRejectOpen(false)}
+              disabled={bulkUpdateMutation.isPending}
+              className="w-full sm:w-auto"
+            >
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleBulkReject}
+              loading={bulkUpdateMutation.isPending}
+              className="w-full sm:w-auto"
+            >
+              Tolak {selectedIds.length} Klaim
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <LostReportDetailModal
         report={viewingReport}
@@ -752,13 +753,20 @@ export default function AdminPage() {
         getWhatsAppVerificationUrl={getWhatsAppVerificationUrl}
       />
 
-      <CustodyChainModal
-        key={markingFoundReport?.id || 'custody-chain-modal'}
-        report={markingFoundReport}
-        onClose={() => setMarkingFoundReport(null)}
+      <ConfirmModal
+        open={Boolean(markingFoundReport)}
+        onOpenChange={(open) => !open && setMarkingFoundReport(null)}
+        title={markingFoundReport?.type === 'temuan' ? 'Konfirmasi Barang Diterima di Pos' : 'Tandai Barang Ditemukan'}
+        message={
+          markingFoundReport?.type === 'temuan'
+            ? `Barang akan disimpan di ${DEFAULT_PICKUP_LOCATION} dan ditampilkan di katalog setelah dikonfirmasi petugas.`
+            : `Barang akan disimpan di ${DEFAULT_PICKUP_LOCATION} dan laporan ditandai ditemukan. Pemilik akan dihubungi untuk verifikasi.`
+        }
+        confirmText={markingFoundReport?.type === 'temuan' ? 'Tandai Diterima' : 'Tandai Ditemukan'}
+        cancelText="Batal"
+        variant="primary"
+        loading={isUpdatingReport}
         onConfirm={handleConfirmMarkFound}
-        isPending={isUpdatingReport}
-        quickLocations={QUICK_LOCATIONS}
       />
 
       {completingReport && (
