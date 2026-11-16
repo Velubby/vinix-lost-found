@@ -430,7 +430,7 @@ function ReportForm() {
       setSubmittedReportCode(reportCode);
       setSubmitError('');
       setIsSuccess(true);
-      toast.success('Laporan berhasil dikirim! Jika ini laporan temuan, silakan serahkan barang ke pos/penyimpanan sesuai arahan petugas untuk verifikasi.');
+      toast.success('Laporan berhasil dikirim! Jika ini laporan temuan, serahkan barang sesuai jam layanan agar petugas bisa memverifikasi.');
       setFormData((prev) => ({
         ...prev,
         namaBarang: '',
@@ -975,8 +975,8 @@ function ReportForm() {
               </DialogTitle>
               <DialogDescription className="mx-auto mt-1 max-w-sm text-[13px] leading-5 text-body">
                 {reportType === 'temuan'
-                  ? 'Serahkan barang ke posko sesuai waktu layanan; petugas akan memverifikasi sebelum barang tampil di katalog.'
-                  : 'Petugas posko keamanan akan memverifikasi dan mencocokkan ciri barang Anda di sistem kantor.'}
+                  ? 'Serahkan barang sesuai jam layanan; petugas akan memverifikasi sebelum barang tampil di katalog.'
+                  : 'Petugas akan memverifikasi dan mencocokkan ciri barang Anda di sistem kantor.'}
               </DialogDescription>
             </div>
 
@@ -1022,7 +1022,8 @@ function ReportForm() {
               <HandoverInfoCard
                 title="Cara menyerahkan barang"
                 location={DEFAULT_PICKUP_LOCATION}
-                note="Bawa barang dan nomor laporan ini agar petugas langsung menerima dan memverifikasi barang."
+                bring="ID karyawan/KTP dan barang temuan"
+                note="Tunjukkan nomor laporan ini ke petugas agar barang langsung diverifikasi."
               />
             )}
 

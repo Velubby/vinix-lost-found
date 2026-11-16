@@ -200,7 +200,7 @@ export function ContactStaffButton({
                   {OFFICE_ADDRESS}
                 </p>
                 <p className="text-pretty text-[13px] leading-5 text-body">
-                  Titik pengambilan: {DEFAULT_PICKUP_LOCATION}. Datang pada {OFFICE_HOURS} dengan membawa ID card/KTP.
+                  Titik pengambilan: {DEFAULT_PICKUP_LOCATION}. Datang pada jam layanan {OFFICE_HOURS} dengan membawa ID card/KTP.
                 </p>
                 <p className="text-pretty text-xs leading-5 text-muted">
                   Waktu penanganan mengikuti ketersediaan petugas.

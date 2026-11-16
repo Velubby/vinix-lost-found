@@ -42,7 +42,7 @@ export default function HelpPage() {
     },
     {
       q: 'Di mana pengambilan barang yang klaimnya disetujui?',
-      a: `Pengambilan dilakukan di ${DEFAULT_PICKUP_LOCATION}, ${OFFICE_NAME} (${OFFICE_ADDRESS}) pada ${OFFICE_HOURS}. Tunjukkan tiket klaim dan kartu identitas (ID karyawan/KTP) saat verifikasi.`
+      a: `Pengambilan dilakukan di ${DEFAULT_PICKUP_LOCATION}, ${OFFICE_NAME} (${OFFICE_ADDRESS}) pada jam layanan ${OFFICE_HOURS}. Tunjukkan tiket klaim dan kartu identitas (ID karyawan/KTP) saat verifikasi.`
     }
   ];
 

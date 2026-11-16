@@ -8,7 +8,7 @@ import { formatDate } from '@/lib/date';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { TextInput } from '@/components/ui/Field';
-import { DEFAULT_PICKUP_LOCATION } from '@/lib/locations';
+import { DEFAULT_PICKUP_LOCATION, OFFICE_HOURS } from '@/lib/locations';
 
 interface ClaimDetailModalProps {
   claim: Claim | null;
@@ -129,7 +129,7 @@ export function ClaimDetailModal({
               ))}
             </div>
             <p className="pt-1 text-xs leading-5 text-muted">
-              Setelah disetujui, pemohon dapat melihat lokasi ini dan mengambil barang pada jam kerja kantor dengan menunjukkan tiket klaim.
+              Setelah disetujui, pemohon dapat melihat lokasi ini dan mengambil barang pada jam layanan {OFFICE_HOURS} dengan menunjukkan tiket klaim.
             </p>
           </div>
         )}

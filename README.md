@@ -4,7 +4,7 @@ Sistem internal Lost & Found PT. Vinix Seven Aurum (VINIX7). Karyawan dapat mela
 
 ## Tentang aplikasi
 
-Barang temuan hanya tampil di katalog setelah petugas memastikan barang fisik sudah diterima dan disimpan. Pemilik dapat mengajukan klaim kapan saja setelah barang muncul di katalog, lalu mengambilnya pada jam kerja kantor sesuai lokasi yang tertera di tiket.
+Barang temuan hanya tampil di katalog setelah petugas memastikan barang fisik sudah diterima dan disimpan. Pemilik dapat mengajukan klaim kapan saja setelah barang muncul di katalog, lalu mengambilnya pada jam layanan Senin–Jumat 08.00–17.00 sesuai lokasi yang tertera di tiket.
 
 Aplikasi ini hanya untuk karyawan VINIX7. Pendaftaran dibatasi oleh domain email perusahaan.
 
@@ -38,7 +38,7 @@ Aplikasi ini hanya untuk karyawan VINIX7. Pendaftaran dibatasi oleh domain email
 2. Petugas menerima barang, menyimpannya, lalu mengonfirmasi penerimaan di aplikasi. Barang baru muncul di katalog setelah konfirmasi ini.
 3. Pemilik menemukan barangnya di katalog dan mengajukan klaim dengan menjelaskan ciri khusus.
 4. Petugas mencocokkan ciri kepemilikan. Jika disetujui, petugas menentukan lokasi pengambilan.
-5. Pemilik datang pada jam kerja kantor, membawa ID karyawan/KTP dan menunjukkan tiket klaim.
+5. Pemilik datang pada jam layanan Senin–Jumat 08.00–17.00, membawa ID karyawan/KTP dan menunjukkan tiket klaim.
 6. Petugas menyerahkan barang dan menandai serah terima. Laporan temuan dan klaim menjadi selesai.
 
 Tidak ada penjadwalan pengambilan. Barang yang belum diklaim tetap tampil di katalog sampai petugas menutupnya.
@@ -98,7 +98,9 @@ Buka [http://localhost:3000](http://localhost:3000).
 PT. Vinix Seven Aurum (VINIX7)
 Jl. Watugede No.58, Wonorejo, Sariharjo, Kec. Ngaglik, Kabupaten Sleman, Daerah Istimewa Yogyakarta 55581
 
-Alamat ini dipakai pada instruksi pengambilan barang. Daftar lokasi penyimpanan dan pengambilan ada di [src/lib/locations.ts](src/lib/locations.ts).
+Jam layanan: Senin–Jumat, 08.00–17.00.
+
+Alamat dan jam ini dipakai pada instruksi serah terima barang. Daftar lokasi penyimpanan dan pengambilan ada di [src/lib/locations.ts](src/lib/locations.ts).
 
 ## Pengecekan kode
 

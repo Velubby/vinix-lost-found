@@ -25,7 +25,7 @@ import { RejectClaimModal } from './components/RejectClaimModal';
 import { LostReportDetailModal } from './components/LostReportDetailModal';
 import { ClaimRejectionFields } from './components/ClaimRejectionFields';
 import { CLAIM_REJECTION_REASONS, composeDecisionNote } from '@/lib/claim-reasons';
-import { DEFAULT_PICKUP_LOCATION, PICKUP_LOCATIONS } from '@/lib/locations';
+import { DEFAULT_PICKUP_LOCATION, OFFICE_HOURS, PICKUP_LOCATIONS } from '@/lib/locations';
 
 const QUICK_LOCATIONS = PICKUP_LOCATIONS;
 
@@ -303,7 +303,7 @@ export default function AdminPage() {
         storageLocation: DEFAULT_PICKUP_LOCATION,
       });
       if (res.success) {
-        toast.success(`Barang "${markingFoundReport.item_title}" diterima dan disimpan di posko`);
+        toast.success(`Barang "${markingFoundReport.item_title}" diterima dan disimpan`);
         if (viewingReport && viewingReport.id === markingFoundReport.id) {
           setViewingReport((prev) => (prev ? { ...prev, status: 'ditemukan' } : null));
         }
@@ -353,7 +353,7 @@ export default function AdminPage() {
     if (!report.contact_phone) return null;
     const phone = report.contact_phone.replace(/^0/, '62').replace(/[^0-9]/g, '');
     const reporterName = report.reporter?.full_name || 'Pelapor';
-    const text = `Halo Sdr/i ${reporterName},\nKami dari petugas Lost & Found kantor menginfokan bahwa barang yang sesuai dengan laporan kehilangan Anda ("${report.item_title}", No. Laporan: ${report.report_code}) telah ditemukan dan diamankan.\n\nSilakan datang ke lokasi pengambilan/penyimpanan yang diinformasikan dengan membawa kartu identitas (ID karyawan/KTP) dan bersiap menyebutkan/membuktikan ciri kepemilikan barang untuk proses serah terima.\n\nTerima kasih.`;
+    const text = `Halo Sdr/i ${reporterName},\nKami dari petugas Lost & Found kantor menginfokan bahwa barang yang sesuai dengan laporan kehilangan Anda ("${report.item_title}", No. Laporan: ${report.report_code}) telah ditemukan dan diamankan.\n\nSilakan datang ke ${DEFAULT_PICKUP_LOCATION} pada jam layanan ${OFFICE_HOURS} dengan membawa kartu identitas (ID karyawan/KTP) dan bersiap menyebutkan/membuktikan ciri kepemilikan barang untuk proses serah terima.\n\nTerima kasih.`;
     return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
   };
 

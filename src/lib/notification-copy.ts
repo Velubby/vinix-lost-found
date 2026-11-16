@@ -1,4 +1,4 @@
-import { DEFAULT_PICKUP_LOCATION } from '@/lib/locations';
+import { DEFAULT_PICKUP_LOCATION, OFFICE_HOURS } from '@/lib/locations';
 import type { ReportStatus } from '@/types/claims';
 
 type ReportType = 'hilang' | 'temuan';
@@ -20,7 +20,7 @@ export function reportStatusNotification(input: {
         }
       : {
           title: 'Barang ditemukan',
-          body: `Barang yang cocok dengan laporan ${quoted} sudah ditemukan dan disimpan di pos. Datang dengan ID karyawan/KTP untuk verifikasi serah terima.`,
+          body: `Barang yang cocok dengan laporan ${quoted} sudah ditemukan dan disimpan. Datang pada jam layanan ${OFFICE_HOURS} dengan ID karyawan/KTP untuk verifikasi serah terima.`,
         };
   }
 
@@ -92,7 +92,7 @@ export function claimStatusNotification(input: {
   if (status === 'disetujui') {
     return {
       title: 'Klaim disetujui',
-      body: `Tiket ${ticketCode} disetujui. Ambil barang di ${pickupLocation || DEFAULT_PICKUP_LOCATION} dengan membawa ID karyawan/KTP dan tiket ini.`,
+      body: `Tiket ${ticketCode} disetujui. Ambil barang di ${pickupLocation || DEFAULT_PICKUP_LOCATION} pada jam layanan ${OFFICE_HOURS} dengan membawa ID karyawan/KTP dan tiket ini.`,
     };
   }
 

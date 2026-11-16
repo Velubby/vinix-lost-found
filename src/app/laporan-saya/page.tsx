@@ -42,6 +42,7 @@ import {
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ContactStaffButton } from '@/components/ContactStaffButton';
+import { DEFAULT_PICKUP_LOCATION, OFFICE_HOURS } from '@/lib/locations';
 
 type CategoryTab = 'hilang' | 'temuan' | 'klaim';
 type FilterStatus = 'semua' | Exclude<ReportStatus, 'draf'>;
@@ -267,10 +268,10 @@ function MyReportsContent() {
                       <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-info" aria-hidden="true" />
                       <div className="space-y-0.5">
                         <strong className="block text-[13px] font-semibold text-ink">
-                          Kabar Baik! Barang Anda telah ditemukan dan diamankan di pos/penyimpanan.
+                          Kabar baik! Barang Anda telah ditemukan dan disimpan.
                         </strong>
                         <span className="block text-pretty text-[13px] leading-5 text-body">
-                          Silakan datang ke pos penyimpanan/pengambilan dengan membawa kartu identitas (ID karyawan/KTP) dan sebutkan ciri khusus barang untuk proses verifikasi serah terima.
+                          Silakan ambil di <strong className="font-semibold text-ink">{report.storage_location ?? DEFAULT_PICKUP_LOCATION}</strong> pada jam layanan {OFFICE_HOURS}. Bawa ID karyawan/KTP dan sebutkan ciri khusus barang saat verifikasi.
                         </span>
                       </div>
                     </div>
@@ -433,10 +434,10 @@ function MyReportsContent() {
                       <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-success" aria-hidden="true" />
                       <div className="space-y-0.5">
                         <strong className="block text-[13px] font-semibold text-ink">
-                          Klaim Disetujui! Barang siap diambil di lokasi pengambilan.
+                          Klaim disetujui! Barang siap diambil.
                         </strong>
                         <span className="block text-pretty text-[13px] leading-5 text-body">
-                          Lokasi pengambilan: <strong className="font-semibold text-ink">{claim.pickup_location || 'Resepsionis / Lobi Utama VINIX7'}</strong>. Bawa ID card/KTP dan tunjukkan tiket ini kepada petugas.
+                          Lokasi pengambilan: <strong className="font-semibold text-ink">{claim.pickup_location || DEFAULT_PICKUP_LOCATION}</strong>. Datang pada jam layanan {OFFICE_HOURS} dengan membawa ID card/KTP dan tunjukkan tiket ini kepada petugas.
                         </span>
                       </div>
                     </div>

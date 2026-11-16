@@ -39,14 +39,14 @@ function getReportProgress(report: Pick<UserReportRow, 'type' | 'status'>, claim
   const description = {
     draf: 'Laporan masih berupa draf dan belum masuk proses penanganan.',
     aktif: isFoundReport
-      ? 'Laporan temuan diterima. Silakan serahkan barang ke pos/penyimpanan untuk verifikasi.'
+      ? 'Laporan temuan diterima. Serahkan barang ke petugas untuk diverifikasi.'
       : 'Laporan kehilangan aktif. Barang masih dalam pencarian.',
     ditemukan: isFoundReport
-      ? 'Barang sudah aman di pos/penyimpanan dan tampil di katalog. Menunggu pemilik mengajukan klaim.'
+      ? 'Barang sudah aman di lokasi penyimpanan dan tampil di katalog. Menunggu pemilik mengajukan klaim.'
       : 'Barang telah dinyatakan ditemukan. Kepemilikan perlu diverifikasi sebelum pengambilan.',
     klaim: isFoundReport
       ? claim?.status === 'disetujui'
-        ? 'Klaim sudah disetujui. Barang menunggu diambil pemilik pada jam kerja kantor.'
+        ? `Klaim sudah disetujui. Barang menunggu diambil di ${claim?.pickup_location ?? DEFAULT_PICKUP_LOCATION} pada jam layanan ${OFFICE_HOURS}.`
         : 'Ada klaim kepemilikan yang perlu diverifikasi oleh petugas.'
       : 'Ada klaim kepemilikan yang perlu diverifikasi oleh petugas.',
     selesai: 'Laporan telah ditandai selesai. Lihat riwayat aktivitas untuk rincian penyelesaiannya.',
@@ -75,7 +75,7 @@ function getClaimProgress(claim: ClaimRow) {
     ditinjau: 'Petugas sedang memeriksa ciri kepemilikan. Simpan nomor tiket ini sampai proses selesai.',
     disetujui: isHandedOver
       ? 'Barang sudah diserahkan. Simpan tiket ini sebagai bukti pengambilan.'
-      : `Klaim disetujui. Silakan datang ke ${DEFAULT_PICKUP_LOCATION} pada ${OFFICE_HOURS} dengan membawa ID card/KTP.`,
+      : `Klaim disetujui. Silakan datang ke ${claim.pickup_location ?? DEFAULT_PICKUP_LOCATION} pada jam layanan ${OFFICE_HOURS} dengan membawa ID card/KTP.`,
     ditolak: 'Ciri kepemilikan belum cocok dengan barang. Kalau barang masih tersedia, kamu bisa mengajukan satu klaim ulang dengan bukti tambahan.',
     ditutup: 'Klaim ditutup karena barang sudah diklaim dan diserahkan kepada pemohon lain yang terverifikasi.',
   }[claim.status];
@@ -127,7 +127,7 @@ function getClaimTimeline(claim: ClaimRow) {
       timeline.push({
         id: 'claim-approved',
         title: 'Klaim disetujui',
-        description: `Barang menunggu diambil di ${claim.pickup_location ?? DEFAULT_PICKUP_LOCATION} pada ${OFFICE_HOURS}. Bawa ID card/KTP.`,
+        description: `Barang menunggu diambil di ${claim.pickup_location ?? DEFAULT_PICKUP_LOCATION} pada jam layanan ${OFFICE_HOURS}. Bawa ID card/KTP.`,
         created_at: approvedAt,
       });
     }
@@ -372,9 +372,6 @@ function TrackingContent() {
                 <div>
                   <h3 className={`text-sm font-semibold ${titleTone}`}>Status klaim: {statusLabel}</h3>
                   <p className="mt-1 text-pretty text-[13px] leading-5 text-body">{description}</p>
-                  {claim.pickup_location && (
-                    <p className="mt-1 text-[13px] font-medium text-body">Lokasi pengambilan: {claim.pickup_location}</p>
-                  )}
                 </div>
               </div>
               {isApproved && !isHandedOver && isClaimOwner && (
@@ -521,7 +518,8 @@ function TrackingContent() {
           <HandoverInfoCard
             title="Serahkan barang temuan ke posko"
             location={DEFAULT_PICKUP_LOCATION}
-            note="Bawa barang dan nomor laporan ini agar petugas langsung menerima dan memverifikasi barang."
+            bring="ID karyawan/KTP dan barang temuan"
+            note="Tunjukkan nomor laporan ini ke petugas agar barang langsung diverifikasi."
           />
         )}
 
@@ -547,7 +545,8 @@ function TrackingContent() {
                 title="Datang ambil barang"
                 actionLabel="Ambil di"
                 location={report.storage_location ?? DEFAULT_PICKUP_LOCATION}
-                note="Sebutkan ciri khusus barang untuk verifikasi."
+                note="Sebutkan ciri khusus barang saat verifikasi."
+                linkLabel="Panduan pengambilan"
               />
             </div>
           )}

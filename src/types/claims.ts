@@ -139,7 +139,7 @@ export const REPORT_TYPE_STATUS_LABELS: Record<LostReport['type'], Record<Report
   hilang: {
     draf: 'Draf',
     aktif: 'Dalam Pencarian',
-    ditemukan: 'Ditemukan di Posko',
+    ditemukan: 'Barang Ditemukan',
     klaim: 'Proses Klaim',
     selesai: 'Selesai (Diserahkan)',
   },

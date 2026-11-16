@@ -995,8 +995,7 @@ export async function updateReportStatusAction(input: {
 
     if (parsed.status === 'ditemukan') {
       eventTitle = existingReport.type === 'temuan' ? 'Barang diterima di pos/penyimpanan' : 'Barang ditemukan';
-      eventDescription = `Barang telah disimpan di ${reportUpdatePayload.storage_location}, lalu diterima dan diverifikasi oleh petugas.`;
-      if (parsed.note) eventDescription += ` ${parsed.note}`;
+      eventDescription = `Barang telah disimpan di ${resolvedStorage}, lalu diterima dan diverifikasi oleh petugas.`;
     } else if (parsed.status === 'selesai') {
       eventTitle = 'Barang berhasil diverifikasi dan diserahkan';
       eventDescription = parsed.note || 'Ciri kepemilikan telah diverifikasi oleh petugas dan barang telah diserahkan kembali kepada pemilik.';
