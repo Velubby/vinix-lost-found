@@ -22,6 +22,7 @@ import {
   Bell,
   XCircle,
   Archive,
+  ArrowRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -350,6 +351,14 @@ function MyReportsContent() {
                           <p className="mt-1 line-clamp-2 max-w-xl text-pretty text-[13px] leading-5 text-body">
                             {report.public_description}
                           </p>
+                          {report.type === 'hilang' && report.status === 'aktif' && (
+                            <Link
+                              href={`/lacak?report=${report.id}#barang-temuan-baru`}
+                              className="mt-2 inline-flex min-h-11 items-center gap-1 rounded-control text-[13px] font-semibold text-accent transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                            >
+                              Cek barang temuan baru <ArrowRight className="size-3.5" aria-hidden="true" />
+                            </Link>
+                          )}
                         </div>
 
                         {/* Location & Dates */}

@@ -47,7 +47,7 @@ export function mapItem(row: ItemRow): CatalogItem {
   };
 }
 
-export async function fetchCatalogItems(options?: { withinHours?: number }) {
+export async function fetchCatalogItems(options?: { withinHours?: number; since?: string }) {
   let query = createClient()
     .from('items')
     .select('id, title, category, location, found_at, image_url, description, status, diterima_di_pos')
@@ -58,6 +58,10 @@ export async function fetchCatalogItems(options?: { withinHours?: number }) {
 
   if (options?.withinHours) {
     query = query.gte('found_at', new Date(Date.now() - options.withinHours * 60 * 60 * 1000).toISOString());
+  }
+
+  if (options?.since) {
+    query = query.gte('found_at', options.since);
   }
 
   const { data, error } = await query;

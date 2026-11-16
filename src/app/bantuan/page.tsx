@@ -34,7 +34,7 @@ export default function HelpPage() {
     },
     {
       q: 'Bagaimana jika barang saya belum muncul di katalog pencarian?',
-      a: 'Buat laporan melalui menu Lapor Barang. Sistem akan menyimpan laporan Anda dan membantu pencocokan saat ada barang temuan yang relevan.'
+      a: 'Buat laporan melalui menu Lapor Barang, lalu buka bagian "Barang temuan baru" di halaman Lacak atau cek katalog secara berkala. Sistem belum mencocokkan laporan secara otomatis, jadi tetap periksa sendiri ciri barangnya.'
     },
     {
       q: 'Bagaimana proses verifikasi kepemilikan barang?',

@@ -9,6 +9,7 @@ import { formatDate } from '@/lib/date';
 import { fetchLatestUserReport, type ReportEventRow, type UserReportRow, type ClaimRow, type ClaimItemRow } from '@/lib/supabase/reports';
 import { DEFAULT_PICKUP_LOCATION, OFFICE_HOURS } from '@/lib/locations';
 import { HandoverInfoCard } from '@/components/HandoverInfoCard';
+import { NewFoundItemsDigest } from '@/components/NewFoundItemsDigest';
 import { getClaimStatusLabel, REPORT_STATUS_COLORS, STATUS_COLORS } from '@/types/claims';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ContactStaffButton } from '@/components/ContactStaffButton';
@@ -552,6 +553,10 @@ function TrackingContent() {
           )}
         </div>
       </div>
+
+      {report.type === 'hilang' && report.status === 'aktif' && (
+        <NewFoundItemsDigest key={report.id} since={report.incident_at} />
+      )}
 
       <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
         <div className="space-y-6 rounded-card border border-line bg-surface p-5 sm:p-8 lg:col-span-8">
