@@ -1,3 +1,10 @@
+-- VINIX7 Lost & Found — complete Supabase schema for a new project.
+-- Run this in Supabase Dashboard → SQL Editor. Safe to re-run.
+--
+-- Before running, set the allowed signup domains in
+-- public.enforce_allowed_signup_email (search for "allowed_domains") to match
+-- NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS. Domains must be lowercase and without @.
+
 do $$
 begin
   create type public.report_type as enum ('hilang', 'temuan');
@@ -98,7 +105,7 @@ create table if not exists public.report_events (
   created_at timestamptz not null default now()
 );
 
--- Compatibility alters for existing/new-project application in order
+-- Keep the script idempotent so it can be re-applied to its own objects.
 alter type public.claim_status add value if not exists 'ditutup';
 alter table public.profiles add column if not exists phone text;
 alter table public.profiles add column if not exists department text;
@@ -158,6 +165,7 @@ drop policy if exists "Staff can view reports" on public.reports;
 drop policy if exists "Users can view their claims" on public.claims;
 drop policy if exists "Users can create their claims" on public.claims;
 drop policy if exists "Report and item owners can view claims" on public.claims;
+drop policy if exists "Users and staff can view claims" on public.claims;
 drop policy if exists "Staff can view and update claims" on public.claims;
 drop policy if exists "Staff can update claims" on public.claims;
 drop policy if exists "Users can view events for their reports" on public.report_events;
@@ -361,6 +369,46 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+-- Server-side signup guard: reject direct Supabase Auth signUps whose email
+-- domain is not on the allowlist. Keep this list in sync with
+-- NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS. The client-side check in
+-- src/lib/supabase/auth.ts only improves the error message; this trigger is
+-- the security boundary.
+create or replace function public.enforce_allowed_signup_email()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+declare
+  allowed_domains text[] := array['vinix7.id'];
+  email_domain text;
+begin
+  if new.email is null then
+    raise exception 'Email is required';
+  end if;
+
+  email_domain := lower(split_part(trim(new.email), '@', 2));
+
+  if email_domain = '' or not (email_domain = any(allowed_domains)) then
+    raise exception 'Email domain is not allowed'
+      using errcode = '22023'; -- invalid_parameter_value
+  end if;
+
+  return new;
+end;
+$$;
+
+revoke all on function public.enforce_allowed_signup_email() from public;
+revoke all on function public.enforce_allowed_signup_email() from anon;
+revoke all on function public.enforce_allowed_signup_email() from authenticated;
+
+drop trigger if exists enforce_allowed_signup_email on auth.users;
+create trigger enforce_allowed_signup_email
+  before insert on auth.users
+  for each row
+  execute function public.enforce_allowed_signup_email();
 
 create or replace function public.publish_found_report()
 returns trigger
@@ -660,6 +708,11 @@ drop trigger if exists on_claim_updated on public.claims;
 create trigger on_claim_updated
 after update on public.claims
 for each row execute procedure public.handle_claim_updated();
+
+-- Timeline events come from the app paths (receipt, claim, handover), so a
+-- generic status trigger is not created here. Drop it in case a previous run
+-- left one behind.
+drop trigger if exists on_report_status_changed on public.reports;
 
 create or replace function public.remove_found_item_after_report_delete()
 returns trigger

@@ -75,11 +75,9 @@ NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS=vinix7.id
 
 ### 3. Siapkan Supabase
 
-Pada proyek Supabase baru, jalankan [supabase/schema.sql](supabase/schema.sql) melalui SQL Editor. Skrip ini membuat tabel, aturan akses, trigger, serta bucket foto publik `item-images` dan bucket privat `item-originals` untuk foto asli yang hanya dibaca petugas.
+Jalankan [supabase/schema.sql](supabase/schema.sql) melalui SQL Editor. Satu skrip ini membuat tabel, aturan akses, trigger, fungsi klaim, notifikasi, serta bucket foto publik `item-images` dan bucket privat `item-originals` untuk foto asli yang hanya dibaca petugas.
 
-Untuk proyek yang sudah berjalan, jalankan [supabase/hardening.sql](supabase/hardening.sql) setelah `schema.sql`. Patch ini menyelaraskan trigger klaim, aturan baca katalog, dan kebijakan klaim. Aman dijalankan berulang.
-
-Jalankan [supabase/auth-domain-guard.sql](supabase/auth-domain-guard.sql) untuk menegakkan pembatasan domain email di sisi server (mencegah pendaftaran langsung lewat Supabase Auth dengan domain di luar daftar). Sesuaikan daftar domain di skrip agar sama dengan `NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS`.
+Skrip juga menegakkan pembatasan domain email di sisi server, sehingga pendaftaran langsung lewat Supabase Auth dengan domain di luar daftar akan ditolak. Sesuaikan daftar domain di `public.enforce_allowed_signup_email` (cari `allowed_domains`) agar sama dengan `NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS` sebelum menjalankan skrip. Skrip aman dijalankan ulang.
 
 Gunakan provider Email untuk pendaftaran dan login email/password. Login Google tidak dipakai. Pengaturan **Confirm email** menentukan apakah pengguna harus mengonfirmasi email sebelum masuk.
 
