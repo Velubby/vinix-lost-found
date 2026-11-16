@@ -546,7 +546,7 @@ function TrackingContent() {
                 title="Datang ambil barang"
                 actionLabel="Ambil di"
                 location={report.storage_location ?? DEFAULT_PICKUP_LOCATION}
-                note="Sebutkan ciri khusus barang saat verifikasi."
+                note="Tunjukkan nomor laporan ini ke petugas, lalu sebutkan ciri khusus barang saat verifikasi."
                 linkLabel="Panduan pengambilan"
               />
             </div>

@@ -7,20 +7,20 @@ import { PageHeader } from '@/components/ui/PageHeader';
 
 const GUIDE_STEPS = [
   {
-    title: 'Cari Barang',
-    description: 'Gunakan kata kunci dan filter lokasi untuk mengecek barang temuan terbaru.',
-  },
-  {
     title: 'Lapor Barang',
-    description: 'Isi formulir barang hilang atau temuan beserta ciri umum dan lokasi kejadian.',
+    description: 'Buat laporan barang hilang atau temuan. Sertakan ciri umum, lokasi, dan waktu kejadian.',
   },
   {
-    title: 'Klaim Rahasia',
-    description: 'Jawab pertanyaan ciri privat untuk membuktikan kepemilikan Anda kepada petugas.',
+    title: 'Petugas Mencocokkan',
+    description: 'Petugas memeriksa laporan dengan barang temuan yang tersimpan. Katalog bisa kamu cek sebagai bantuan.',
+  },
+  {
+    title: 'Verifikasi Kepemilikan',
+    description: 'Saat barang ditemukan, tunjukkan identitas dan sebutkan ciri khusus barang kepada petugas.',
   },
   {
     title: 'Ambil Barang',
-    description: 'Datang ke lokasi pengambilan yang tertera pada tiket dengan membawa identitas setelah klaim disetujui.',
+    description: 'Datang ke lokasi penyimpanan pada jam layanan dengan membawa ID karyawan/KTP dan nomor laporan atau tiket klaim.',
   },
 ];
 
@@ -34,7 +34,7 @@ export default function HelpPage() {
     },
     {
       q: 'Bagaimana jika barang saya belum muncul di katalog pencarian?',
-      a: 'Buat laporan melalui menu Lapor Barang, lalu buka bagian "Barang temuan baru" di halaman Lacak atau cek katalog secara berkala. Sistem belum mencocokkan laporan secara otomatis, jadi tetap periksa sendiri ciri barangnya.'
+      a: 'Buat laporan melalui menu Lapor Barang. Petugas juga menyimpan barang temuan yang belum masuk katalog, jadi laporan Anda tetap diperlukan. Anda bisa memeriksa bagian "Barang temuan baru" di halaman Lacak atau katalog sebagai bantuan, tetapi sistem belum mencocokkan laporan secara otomatis. Petugas memeriksa kecocokan secara manual.'
     },
     {
       q: 'Bagaimana proses verifikasi kepemilikan barang?',
@@ -42,7 +42,7 @@ export default function HelpPage() {
     },
     {
       q: 'Di mana pengambilan barang yang klaimnya disetujui?',
-      a: `Pengambilan dilakukan di ${DEFAULT_PICKUP_LOCATION}, ${OFFICE_NAME} (${OFFICE_ADDRESS}) pada jam layanan ${OFFICE_HOURS}. Tunjukkan tiket klaim dan kartu identitas (ID karyawan/KTP) saat verifikasi.`
+      a: `Pengambilan dilakukan di ${DEFAULT_PICKUP_LOCATION}, ${OFFICE_NAME} (${OFFICE_ADDRESS}) pada jam layanan ${OFFICE_HOURS}. Tunjukkan tiket klaim atau nomor laporan, plus kartu identitas (ID karyawan/KTP), saat verifikasi.`
     }
   ];
 

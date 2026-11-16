@@ -162,7 +162,7 @@ export function LostReportDetailModal({
                 className="w-full sm:w-auto"
               >
                 <Check className="size-4" aria-hidden="true" />
-                Verifikasi Selesai &amp; Serahkan
+                Selesaikan Serah Terima
               </Button>
             </>
           )}

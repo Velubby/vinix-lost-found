@@ -68,7 +68,6 @@ export default function AdminPage() {
   const [markingFoundReport, setMarkingFoundReport] = useState<LostReport | null>(null);
   const [completingReport, setCompletingReport] = useState<LostReport | null>(null);
   const [isUpdatingReport, setIsUpdatingReport] = useState(false);
-  const [confirmingReportId, setConfirmingReportId] = useState<string | null>(null);
 
   // Copy Feedback
   const [copiedTicket, setCopiedTicket] = useState<string | null>(null);
@@ -303,7 +302,11 @@ export default function AdminPage() {
         storageLocation: DEFAULT_PICKUP_LOCATION,
       });
       if (res.success) {
-        toast.success(`Barang "${markingFoundReport.item_title}" diterima dan disimpan`);
+        toast.success(
+          markingFoundReport.type === 'temuan'
+            ? `Barang "${markingFoundReport.item_title}" diterima di pos dan tampil di katalog.`
+            : `Barang "${markingFoundReport.item_title}" ditandai ditemukan dan disimpan.`
+        );
         if (viewingReport && viewingReport.id === markingFoundReport.id) {
           setViewingReport((prev) => (prev ? { ...prev, status: 'ditemukan' } : null));
         }
@@ -357,31 +360,6 @@ export default function AdminPage() {
     return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
   };
 
-  const handleConfirmItemHandover = async (report: LostReport) => {
-    setConfirmingReportId(report.id);
-    try {
-      const res = await updateReportStatusAction({
-        reportId: report.id,
-        status: 'ditemukan',
-        storageLocation: DEFAULT_PICKUP_LOCATION,
-      });
-
-      if (res.success) {
-        toast.success(`Barang "${report.item_title}" berhasil dikonfirmasi dan dimasukkan ke katalog.`);
-        await queryClient.invalidateQueries({ queryKey: ['lostReports'] });
-        await queryClient.invalidateQueries({ queryKey: ['adminTabCounts'] });
-        router.refresh();
-      } else {
-        toast.error(res.error || 'Gagal mengonfirmasi penyerahan barang');
-      }
-    } catch (err) {
-      console.error('Error confirming item handover:', err);
-      toast.error('Terjadi kesalahan saat mengonfirmasi barang');
-    } finally {
-      setConfirmingReportId(null);
-    }
-  };
-
   const handleRefresh = () => {
     refetchTabCounts();
     if (activeTab === 'klaim') {
@@ -427,7 +405,7 @@ export default function AdminPage() {
           activeTab === 'klaim'
             ? 'Cocokkan ciri rahasia dari pemohon sebelum menyetujui serah terima barang temuan.'
             : activeTab === 'konfirmasi'
-            ? 'Daftar barang temuan yang dilaporkan karyawan dan menunggu verifikasi fisik di pos/penyimpanan.'
+            ? 'Daftar barang temuan yang dilaporkan karyawan dan belum dikonfirmasi diterima di pos/penyimpanan.'
             : 'Pantau dan kelola laporan kehilangan yang diajukan karyawan.'
         }
         actions={
@@ -560,15 +538,14 @@ export default function AdminPage() {
                     <div className="flex w-full shrink-0 flex-col gap-2.5 border-t border-line pt-4 sm:flex-row sm:items-center lg:w-auto lg:border-t-0 lg:pt-0">
                       <span className="inline-flex w-fit items-center gap-1.5 rounded-pill border border-warning/20 bg-warning-soft px-2.5 py-1 text-[11px] font-semibold text-warning">
                         <span className="size-1.5 rounded-full bg-warning" aria-hidden="true" />
-                        Menunggu Penyerahan
+                        Belum Diterima di Pos
                       </span>
                       <Button
                         type="button"
-                        onClick={() => handleConfirmItemHandover(report)}
-                        loading={confirmingReportId === report.id}
+                        onClick={() => setMarkingFoundReport(report)}
                         className="w-full sm:w-auto"
                       >
-                        {confirmingReportId === report.id ? 'Memproses...' : 'Tandai Diterima di Pos'}
+                        Tandai Diterima di Pos
                       </Button>
                     </div>
                   </div>
@@ -779,9 +756,13 @@ export default function AdminPage() {
       <ConfirmModal
         open={Boolean(markingFoundReport)}
         onOpenChange={(open) => !open && setMarkingFoundReport(null)}
-        title="Tandai Barang Ditemukan"
-        message={`Barang akan disimpan di ${DEFAULT_PICKUP_LOCATION} dan dicatat telah diterima serta diverifikasi oleh petugas.`}
-        confirmText="Tandai Ditemukan"
+        title={markingFoundReport?.type === 'temuan' ? 'Konfirmasi Barang Diterima di Pos' : 'Tandai Barang Ditemukan'}
+        message={
+          markingFoundReport?.type === 'temuan'
+            ? `Barang akan disimpan di ${DEFAULT_PICKUP_LOCATION} dan ditampilkan di katalog setelah dikonfirmasi petugas.`
+            : `Barang akan disimpan di ${DEFAULT_PICKUP_LOCATION} dan laporan ditandai ditemukan. Pemilik akan dihubungi untuk verifikasi.`
+        }
+        confirmText={markingFoundReport?.type === 'temuan' ? 'Tandai Diterima' : 'Tandai Ditemukan'}
         cancelText="Batal"
         variant="primary"
         loading={isUpdatingReport}
